@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetaLyzer - Reveal the Hidden Data</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.js"></script>
+    <style>
+        :root {
+            /* Light Theme Variables */
+            --bg-color: #f4f6f8;
+            --container-bg: #ffffff;
+            --text-color: #333333;
+            --accent-color: #4a90e2;
+            --border-color: #e1e4e8;
+            --drop-zone-bg: #f9fafb;
+            --drop-zone-border: #ccd0d5;
+        }
+
+        [data-theme="dark"] {
+            /* Dark Theme Variables */
+            --bg-color: #1a1a1a;
+            --container-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --accent-color: #64b5f6;
+            --border-color: #444444;
+            --drop-zone-bg: #333333;
+            --drop-zone-border: #555555;
+        }
+
+        * { box-sizing: border-box; transition: background-color 0.3s, color 0.3s; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            background-color: var(--container-bg);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .logo { font-size: 1.5rem; font-weight: bold; color: var(--accent-color); }
+
+        .theme-btn {
+            background: none;
+            border: 2px solid var(--text-color);
+            color: var(--text-color);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .theme-btn:hover { opacity: 0.8; }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            max-width: 900px;
+            width: 100%;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        /* Drag and Drop Zone */
+        .drop-zone {
+            width: 100%;
+            height: 250px;
+            border: 3px dashed var(--drop-zone-border);
+            border-radius: 12px;
+            background-color: var(--drop-zone-bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .drop-zone.drag-over {
+            border-color: var(--accent-color);
+            background-color: rgba(74, 144, 226, 0.1);
+        }
+
+        .drop-zone p { font-size: 1.2rem; color: var(--text-color); margin-bottom: 15px; }
+        
+        .upload-btn {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            display: inline-block;
+            pointer-events: none; /* Let the click pass to the dropzone */
+        }
+
+        #fileInput { display: none; }
+
+        /* Results Table */
+        .results-container {
+            margin-top: 30px;
+            background-color: var(--container-bg);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: none; /* Hidden by default */
+        }
+
+        .results-header {
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px; border-bottom: 1px solid var(--border-color); }
+        th { width: 30%; color: var(--accent-color); }
+        .tag-value { word-break: break-all; }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">MetaLyzer</div>
+        <button id="themeToggle" class="theme-btn">🌙 Dark Mode</button>
+    </header>
+
+    <main>
+        <div class="drop-zone" id="dropZone">
+            <p>Drag & Drop your file here</p>
+            <span class="upload-btn">Or Click to Browse</span>
+            <input type="file" id="fileInput">
+        </div>
+
+        <div class="results-container" id="resultsContainer">
+            <div class="results-header">
+                <h2>Metadata Report</h2>
+                <div id="fileNameDisplay"></div>
+            </div>
+            <table id="metaTable">
+                </table>
+        </div>
+    </main>
+
+    <footer>
+        Made By Aryan Giri
+    </footer>
+
+    <script>
+        // --- Theme Logic (Cookies/LocalStorage) ---
+        const themeToggleBtn = document.getElementById('themeToggle');
+        
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateBtnText(savedTheme);
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            let currentTheme = document.documentElement.getAttribute('data-theme');
+            let newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateBtnText(newTheme);
+        });
+
+        function updateBtnText(theme) {
+            themeToggleBtn.innerText = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+        }
+
+        // --- File Handling Logic ---
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const metaTable = document.getElementById('metaTable');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+
+        // Click on dropzone triggers hidden input
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // Drag events
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) {
+                processFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (fileInput.files.length) {
+                processFile(fileInput.files[0]);
+            }
+        });
+
+        // --- Metadata Extraction ---
+        function processFile(file) {
+            // Reset UI
+            metaTable.innerHTML = '';
+            resultsContainer.style.display = 'block';
+            fileNameDisplay.innerHTML = `<strong>File:</strong> ${file.name} (${formatBytes(file.size)})`;
+
+            // 1. Basic File Metadata (Available for ALL files)
+            addRow('File Type', file.type || 'Unknown');
+            addRow('Last Modified', new Date(file.lastModified).toLocaleString());
+
+            // 2. Advanced Image Metadata (EXIF)
+            // We use the EXIF-JS library loaded in the <head>
+            if (file.type.startsWith('image/')) {
+                EXIF.getData(file, function() {
+                    const allTags = EXIF.getAllTags(this);
+                    
+                    if (Object.keys(allTags).length === 0) {
+                        addRow('Note', 'No EXIF data found in this image.');
+                    } else {
+                        for (let tag in allTags) {
+                            // Filter out the thumbnail binary data which is too long to display
+                            if (tag !== 'thumbnail') {
+                                addRow(tag, allTags[tag]);
+                            }
+                        }
+                    }
+                });
+            } else {
+                addRow('Note', 'Advanced metadata extraction is currently optimized for images (JPEG/TIFF). Basic info shown for other file types.');
+            }
+        }
+
+        function addRow(key, value) {
+            const row = document.createElement('tr');
+            // Check if value is an object (common in some EXIF fields) and stringify it
+            if (typeof value === 'object') {
+                value = JSON.stringify(value);
+            }
+            row.innerHTML = `<th>${key}</th><td class="tag-value">${value}</td>`;
+            metaTable.appendChild(row);
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>
