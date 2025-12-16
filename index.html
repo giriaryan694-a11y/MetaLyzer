@@ -3,252 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MetaLyzer - Professional Metadata Tool</title>
+    <title>MetaLyzer Ultimate - Deep Metadata Forensics</title>
     
     <script src="https://cdn.jsdelivr.net/npm/exifreader@4.23.0/dist/exif-reader.min.js"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         :root {
-            /* Light Theme */
-            --bg-color: #f0f2f5;
+            --bg-color: #f3f4f6;
             --card-bg: #ffffff;
-            --text-primary: #1a1a1a;
-            --text-secondary: #65676b;
-            --accent-color: #2563eb; /* Royal Blue */
+            --text-main: #111827;
+            --text-muted: #6b7280;
+            --accent: #2563eb;
             --accent-hover: #1d4ed8;
-            --border-color: #e4e6eb;
-            --drop-zone-bg: #f8f9fa;
-            --success-color: #10b981;
-            --danger-color: #ef4444;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --border: #e5e7eb;
+            --code-bg: #f9fafb;
+            --success: #10b981;
+            --group-header-bg: #eff6ff;
+            --group-header-text: #1e40af;
         }
 
         [data-theme="dark"] {
-            /* Dark Theme */
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-primary: #e4e6eb;
-            --text-secondary: #b0b3b8;
-            --accent-color: #3b82f6;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f3f4f6;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
             --accent-hover: #60a5fa;
-            --border-color: #2d2d2d;
-            --drop-zone-bg: #242526;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --border: #334155;
+            --code-bg: #0f172a;
+            --success: #34d399;
+            --group-header-bg: #1e3a8a;
+            --group-header-text: #bfdbfe;
         }
 
-        * { box-sizing: border-box; transition: background-color 0.3s ease, color 0.3s ease; }
+        * { box-sizing: border-box; transition: background 0.3s, color 0.3s; }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; margin: 0; background: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
+
+        /* HEADER */
+        header { background: var(--card-bg); padding: 1rem 2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; }
+        .brand { font-size: 1.5rem; font-weight: 800; color: var(--accent); letter-spacing: -0.025em; display: flex; align-items: center; gap: 10px; }
+        .brand span { font-size: 0.8rem; background: var(--accent); color: white; padding: 2px 6px; border-radius: 4px; font-weight: normal; }
         
-        body {
-            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: var(--bg-color);
-            color: var(--text-primary);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
+        .theme-toggle { background: transparent; border: 1px solid var(--border); color: var(--text-main); padding: 0.5rem 1rem; border-radius: 99px; cursor: pointer; font-weight: 600; }
+        .theme-toggle:hover { background: var(--code-bg); }
 
-        /* Header */
-        header {
-            background-color: var(--card-bg);
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
+        /* MAIN */
+        main { max-width: 1200px; margin: 2rem auto; width: 100%; padding: 0 1rem; flex: 1; }
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: var(--accent-color);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .theme-btn {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            padding: 8px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        .theme-btn:hover { background-color: var(--drop-zone-bg); }
-
-        /* Main Container */
-        main {
-            flex: 1;
-            width: 100%;
-            max-width: 1000px;
-            margin: 2rem auto;
-            padding: 0 20px;
-        }
-
-        /* Drop Zone */
-        .drop-zone {
-            background-color: var(--card-bg);
-            border: 2px dashed var(--border-color);
-            border-radius: 16px;
-            padding: 3rem 2rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .drop-zone:hover { border-color: var(--accent-color); }
-        .drop-zone.drag-over { 
-            border-color: var(--accent-color); 
-            background-color: rgba(37, 99, 235, 0.05);
-            transform: scale(1.01);
-        }
-
-        .icon-large { font-size: 3rem; margin-bottom: 1rem; display: block; }
+        /* DROP ZONE */
+        .drop-zone { background: var(--card-bg); border: 2px dashed var(--border); border-radius: 1rem; padding: 4rem 2rem; text-align: center; cursor: pointer; transition: 0.2s; }
+        .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); background: rgba(37, 99, 235, 0.04); }
+        .drop-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+        .drop-subtitle { color: var(--text-muted); margin-bottom: 1.5rem; }
+        .btn-primary { background: var(--accent); color: white; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; border: none; cursor: pointer; display: inline-block; }
         
-        .upload-btn {
-            background-color: var(--accent-color);
-            color: white;
-            padding: 10px 24px;
-            border-radius: 8px;
-            font-weight: 600;
-            display: inline-block;
-            margin-top: 1rem;
-            pointer-events: none;
-        }
-
-        /* Results Section */
-        .results-card {
-            background-color: var(--card-bg);
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-            margin-top: 2rem;
-            overflow: hidden;
-            display: none; /* Hidden by default */
-        }
-
-        .card-header {
-            padding: 1.5rem;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .file-info {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .file-name { font-weight: 700; font-size: 1.1rem; }
-        .file-meta { font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px; }
-
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn-action {
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: opacity 0.2s;
-        }
-        .btn-action:hover { opacity: 0.9; }
-
-        .btn-txt { background-color: var(--drop-zone-bg); color: var(--text-primary); border: 1px solid var(--border-color); }
-        .btn-pdf { background-color: var(--accent-color); color: white; }
-
-        /* Table */
-        .table-container {
-            width: 100%;
-            overflow-x: auto;
-        }
-
-        table { width: 100%; border-collapse: collapse; }
+        /* RESULTS DASHBOARD */
+        .dashboard { display: none; gap: 1.5rem; }
         
-        th, td {
-            padding: 16px 24px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
+        /* Sidebar (Thumbnail & Actions) */
+        .sidebar { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 1.5rem; }
+        .info-card { background: var(--card-bg); border-radius: 1rem; padding: 1.5rem; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        
+        .thumbnail-box { width: 100%; min-height: 200px; background: var(--code-bg); display: flex; align-items: center; justify-content: center; border-radius: 0.5rem; margin-bottom: 1rem; overflow: hidden; border: 1px solid var(--border); }
+        .thumbnail-box img { max-width: 100%; height: auto; }
+        .no-thumb { color: var(--text-muted); font-size: 0.9rem; font-style: italic; }
+
+        .file-stat { margin-bottom: 0.5rem; font-size: 0.9rem; display: flex; justify-content: space-between; }
+        .file-stat strong { color: var(--text-muted); }
+
+        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem; }
+        .btn-action { padding: 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-main); text-align: center; transition: 0.2s; }
+        .btn-action:hover { background: var(--code-bg); border-color: var(--accent); }
+        
+        /* Map Button */
+        .btn-map { width: 100%; margin-top: 0.5rem; background: #e7f5ee; color: #059669; border-color: #10b981; display: none; }
+        [data-theme="dark"] .btn-map { background: #064e3b; color: #6ee7b7; border-color: #059669; }
+
+        /* Main Data Table */
+        .data-panel { flex: 3; background: var(--card-bg); border-radius: 1rem; border: 1px solid var(--border); overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .panel-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--code-bg); }
+        .panel-header h2 { margin: 0; font-size: 1.1rem; }
+        
+        .search-box { padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.5rem; background: var(--card-bg); color: var(--text-main); width: 250px; }
+
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { padding: 0.75rem 1.5rem; text-align: left; border-bottom: 1px solid var(--border); }
+        
+        /* Group Headers */
+        tr.group-header th { background: var(--group-header-bg); color: var(--group-header-text); font-weight: 800; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; padding-top: 1.5rem; padding-bottom: 0.5rem; }
+        
+        th.key-col { width: 30%; color: var(--accent); font-family: 'Courier New', monospace; font-weight: 600; }
+        td.val-col { color: var(--text-main); word-break: break-word; font-family: 'Courier New', monospace; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard { flex-direction: column; }
+            .search-box { width: 100%; margin-top: 10px; }
+            .panel-header { flex-direction: column; align-items: flex-start; }
         }
 
-        th {
-            width: 30%;
-            color: var(--text-secondary);
-            font-weight: 600;
-            font-size: 0.9rem;
-            background-color: rgba(0,0,0,0.02);
-        }
-
-        td {
-            font-family: 'Courier New', monospace;
-            font-size: 0.95rem;
-            word-break: break-all;
-        }
-
-        tr:last-child td, tr:last-child th { border-bottom: none; }
-
-        /* Footer */
-        footer {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            border-top: 1px solid var(--border-color);
-            margin-top: auto;
-        }
+        footer { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border); margin-top: auto; }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">
-            <span>🔎</span> MetaLyzer
+        <div class="brand">
+            MetaLyzer <span>ULTIMATE</span>
         </div>
-        <button id="themeToggle" class="theme-btn">🌙 Dark Mode</button>
+        <button id="themeToggle" class="theme-toggle">🌙 Dark Mode</button>
     </header>
 
     <main>
         <div class="drop-zone" id="dropZone">
-            <span class="icon-large">📁</span>
-            <h3>Drag & Drop your file here</h3>
-            <p style="color: var(--text-secondary)">Supports Images (JPG, PNG, TIFF), PDF, and Videos</p>
-            <span class="upload-btn">Browse Files</span>
-            <input type="file" id="fileInput">
+            <div class="drop-title">Drop file to Unlock Data</div>
+            <div class="drop-subtitle">Analyzes EXIF, XMP, IPTC, ICC, MakerNotes & Embedded Thumbnails</div>
+            <button class="btn-primary">Select File</button>
+            <input type="file" id="fileInput" style="display: none;">
         </div>
 
-        <div class="results-card" id="resultsCard">
-            <div class="card-header">
-                <div class="file-info" id="fileInfoArea">
+        <div class="dashboard" id="dashboard">
+            
+            <div class="sidebar">
+                <div class="info-card">
+                    <div class="thumbnail-box" id="thumbBox">
+                        <span class="no-thumb">No Embedded Thumbnail</span>
                     </div>
-                <div class="action-buttons">
-                    <button class="btn-action btn-txt" onclick="downloadTXT()">📄 Save as TXT</button>
-                    <button class="btn-action btn-pdf" onclick="downloadPDF()">⬇️ Save as PDF</button>
+                    
+                    <div class="file-stat"><strong>Name:</strong> <span id="displayFileName">-</span></div>
+                    <div class="file-stat"><strong>Size:</strong> <span id="displayFileSize">-</span></div>
+                    <div class="file-stat"><strong>Type:</strong> <span id="displayFileType">-</span></div>
+
+                    <button id="btnMap" class="btn-action btn-map" onclick="openMap()">📍 View Location on Map</button>
+
+                    <div class="actions">
+                        <button class="btn-action" onclick="downloadJSON()">{} JSON</button>
+                        <button class="btn-action" onclick="downloadCSV()">📊 CSV</button>
+                        <button class="btn-action" onclick="downloadPDF()">📄 PDF</button>
+                        <button class="btn-action" onclick="downloadTXT()">📝 TXT</button>
+                    </div>
                 </div>
             </div>
-            <div class="table-container">
-                <table id="metaTable">
-                    </table>
+
+            <div class="data-panel">
+                <div class="panel-header">
+                    <h2>Metadata Inspector</h2>
+                    <input type="text" id="searchInput" class="search-box" placeholder="Filter tags (e.g., 'ISO', 'Date')...">
+                </div>
+                <div class="table-wrap">
+                    <table id="metaTable">
+                        </table>
+                </div>
             </div>
+
         </div>
     </main>
 
@@ -257,175 +167,282 @@
     </footer>
 
     <script>
-        // --- 1. Theme Logic ---
-        const themeToggleBtn = document.getElementById('themeToggle');
-        const savedTheme = localStorage.getItem('theme');
-        
-        if (savedTheme) {
-            document.documentElement.setAttribute('data-theme', savedTheme);
-            updateBtnText(savedTheme);
+        // --- CONFIG & STATE ---
+        let currentFile = null;
+        let allTags = {}; 
+        let gpsData = null; // Stores lat/long if found
+
+        // --- THEME ---
+        const themeBtn = document.getElementById('themeToggle');
+        if(localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+        themeBtn.onclick = () => {
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+            localStorage.setItem('theme', isDark ? 'light' : 'dark');
+            themeBtn.innerText = isDark ? '🌙 Dark Mode' : '☀️ Light Mode';
         }
 
-        themeToggleBtn.addEventListener('click', () => {
-            let currentTheme = document.documentElement.getAttribute('data-theme');
-            let newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            updateBtnText(newTheme);
-        });
-
-        function updateBtnText(theme) {
-            themeToggleBtn.innerText = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
-        }
-
-        // --- 2. File Handling ---
+        // --- UPLOAD HANDLERS ---
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
-        const resultsCard = document.getElementById('resultsCard');
-        const metaTable = document.getElementById('metaTable');
-        const fileInfoArea = document.getElementById('fileInfoArea');
+
+        dropZone.onclick = () => fileInput.click();
+        fileInput.onchange = e => handleFile(e.target.files[0]);
         
-        // Global variables to store current file data for downloading
-        let currentFileName = "";
-        let currentMetadata = []; 
+        dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('drag-over'); };
+        dropZone.ondragleave = () => dropZone.classList.remove('drag-over');
+        dropZone.ondrop = e => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); };
 
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('drag-over');
-            if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]);
-        });
-        fileInput.addEventListener('change', () => {
-            if (fileInput.files.length) processFile(fileInput.files[0]);
-        });
+        // --- CORE LOGIC ---
+        async function handleFile(file) {
+            if(!file) return;
+            currentFile = file;
 
-        // --- 3. Processing Logic ---
-        async function processFile(file) {
-            // Reset
-            metaTable.innerHTML = '';
-            currentMetadata = [];
-            currentFileName = file.name;
+            // UI Reset
+            document.getElementById('dashboard').style.display = 'flex';
+            dropZone.style.display = 'none';
+            document.getElementById('metaTable').innerHTML = '<tr><td colspan="2" style="text-align:center;">Analyzing binary data...</td></tr>';
+            document.getElementById('thumbBox').innerHTML = '<span class="no-thumb">Scanning...</span>';
+            document.getElementById('btnMap').style.display = 'none';
             
-            // Update UI Header
-            fileInfoArea.innerHTML = `
-                <span class="file-name">${file.name}</span>
-                <span class="file-meta">${formatBytes(file.size)} • ${file.type || 'Unknown Type'}</span>
-            `;
-            resultsCard.style.display = 'block';
-
-            // Add Basic Info to array and UI
-            addData('File Name', file.name);
-            addData('File Size', formatBytes(file.size));
-            addData('Last Modified', new Date(file.lastModified).toLocaleString());
-            addData('MIME Type', file.type || 'Unknown');
+            // Basic Info
+            document.getElementById('displayFileName').innerText = file.name;
+            document.getElementById('displayFileSize').innerText = formatBytes(file.size);
+            document.getElementById('displayFileType').innerText = file.type || 'Unknown';
 
             try {
-                // Use ExifReader
-                const tags = await ExifReader.load(file);
-                
-                // Sort keys alphabetically for better readability
-                const sortedKeys = Object.keys(tags).sort();
+                // EXIFREADER POWER MODE: load(file, {expanded: true})
+                // This groups tags by type (exif, iptc, xmp) instead of a flat list
+                const tags = await ExifReader.load(file, { expanded: true });
+                allTags = tags; // Store globally for search/export
 
-                for (let key of sortedKeys) {
-                    // Skip internal or binary heavy tags
-                    if (['MakerNote', 'UserComment', 'Thumbnail', 'PrintIM'].includes(key)) continue;
+                renderTable(tags);
+                checkThumbnail(tags);
+                checkGPS(tags);
 
-                    let val = tags[key].description;
-                    if (!val && tags[key].value) val = tags[key].value;
-                    
-                    // Clean array values
-                    if (Array.isArray(val)) val = val.join(', ');
-
-                    if (val) {
-                        addData(formatKey(key), val);
-                    }
-                }
-            } catch (err) {
-                console.log("No advanced metadata found or non-supported file type.");
-                // We still show the basic info we collected above
+            } catch (error) {
+                console.error(error);
+                document.getElementById('metaTable').innerHTML = `<tr><td colspan="2" style="color:red; text-align:center;">Error: ${error.message}<br>File might not contain standard metadata.</td></tr>`;
             }
         }
 
-        function addData(key, value) {
-            // Store for download
-            currentMetadata.push({ key: key, value: String(value) });
+        // --- RENDERING ---
+        function renderTable(tagsGroups) {
+            const table = document.getElementById('metaTable');
+            table.innerHTML = '';
 
-            // Truncate for display if too long
-            let displayValue = String(value);
-            if (displayValue.length > 100) displayValue = displayValue.substring(0, 100) + '...';
-
-            const row = document.createElement('tr');
-            row.innerHTML = `<th>${key}</th><td>${displayValue}</td>`;
-            metaTable.appendChild(row);
-        }
-
-        // --- 4. Download Functions ---
-
-        // Download as TXT
-        function downloadTXT() {
-            if (currentMetadata.length === 0) return;
-
-            let content = `METADATA REPORT FOR: ${currentFileName}\n`;
-            content += `Generated by MetaLyzer\n`;
-            content += `=================================================\n\n`;
-
-            currentMetadata.forEach(item => {
-                content += `[${item.key}]: ${item.value}\n`;
+            // Order of groups to display
+            const priorityOrder = ['exif', 'gps', 'xmp', 'iptc', 'icc', 'file', 'png', 'jpeg'];
+            
+            // Get all available groups from the file
+            const availableGroups = Object.keys(tagsGroups);
+            
+            // Sort groups based on priority, then alphabetical
+            availableGroups.sort((a,b) => {
+                let idxA = priorityOrder.indexOf(a);
+                let idxB = priorityOrder.indexOf(b);
+                if(idxA === -1) idxA = 99;
+                if(idxB === -1) idxB = 99;
+                return idxA - idxB;
             });
 
-            const blob = new Blob([content], { type: 'text/plain' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `MetaLyzer_${currentFileName}.txt`;
-            a.click();
-            window.URL.revokeObjectURL(url);
-        }
+            if(availableGroups.length === 0) {
+                table.innerHTML = '<tr><td colspan="2">No Metadata tags found.</td></tr>';
+                return;
+            }
 
-        // Download as PDF
-        function downloadPDF() {
-            if (currentMetadata.length === 0) return;
-            
-            // Access jsPDF from the global window object
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+            availableGroups.forEach(groupName => {
+                // Skip the thumbnail property in the table (we show it in sidebar)
+                if(groupName === 'thumbnail') return;
 
-            // Header
-            doc.setFontSize(18);
-            doc.setTextColor(37, 99, 235); // Accent color
-            doc.text("MetaLyzer Report", 14, 20);
-            
-            doc.setFontSize(10);
-            doc.setTextColor(100);
-            doc.text(`File: ${currentFileName}`, 14, 30);
-            doc.text(`Date: ${new Date().toLocaleString()}`, 14, 35);
-            doc.text(`Made By Aryan Giri`, 14, 40);
+                // Create Group Header
+                const groupRow = document.createElement('tr');
+                groupRow.className = 'group-header';
+                groupRow.innerHTML = `<th colspan="2">${groupName.toUpperCase()} DATA</th>`;
+                table.appendChild(groupRow);
 
-            // Table Data Preparation
-            const tableBody = currentMetadata.map(item => [item.key, item.value]);
+                const groupData = tagsGroups[groupName];
+                
+                // Iterate tags in group
+                for(let key in groupData) {
+                    let val = groupData[key];
+                    
+                    // Logic to get the cleanest string value
+                    let displayValue = val.description || val.value;
+                    
+                    // Handle Arrays
+                    if(Array.isArray(displayValue)) displayValue = `[${displayValue.join(', ')}]`;
+                    
+                    // Handle Objects (rare)
+                    if(typeof displayValue === 'object') displayValue = JSON.stringify(displayValue);
 
-            // Generate Table
-            doc.autoTable({
-                startY: 45,
-                head: [['Property', 'Value']],
-                body: tableBody,
-                theme: 'striped',
-                headStyles: { fillColor: [37, 99, 235] }, // Blue header
-                styles: { fontSize: 9, cellPadding: 4, overflow: 'linebreak' },
-                columnStyles: { 
-                    0: { cellWidth: 50, fontStyle: 'bold' },
-                    1: { cellWidth: 'auto' }
+                    // Add Row
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <th class="key-col">${key}</th>
+                        <td class="val-col">${displayValue}</td>
+                    `;
+                    table.appendChild(row);
                 }
             });
-
-            doc.save(`MetaLyzer_${currentFileName}.pdf`);
         }
 
-        // --- Helpers ---
-        function formatKey(key) {
-            return key.replace(/([A-Z])/g, ' $1').trim();
+        // --- THUMBNAIL LOGIC ---
+        function checkThumbnail(tags) {
+            const box = document.getElementById('thumbBox');
+            if(tags.thumbnail) {
+                // ExifReader extracts base64 directly
+                const img = document.createElement('img');
+                img.src = tags.thumbnail;
+                img.title = "Embedded Preview extracted from file";
+                box.innerHTML = '';
+                box.appendChild(img);
+            } else {
+                // If it's an image file itself, just show the file
+                if(currentFile.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(currentFile);
+                    box.innerHTML = '';
+                    box.appendChild(img);
+                } else {
+                    box.innerHTML = '<span class="no-thumb">No Preview Available</span>';
+                }
+            }
+        }
+
+        // --- GPS LOGIC ---
+        function checkGPS(tags) {
+            // ExifReader usually puts parsed GPS in the 'gps' group or root
+            // We look for specifically calculated latitude/longitude
+            
+            // Note: ExifReader output structure varies slightly by version, 
+            // but usually calculates standard coordinates in the 'gps' group if expanded.
+            
+            let lat = null;
+            let lon = null;
+
+            if(tags.gps && tags.gps.Latitude && tags.gps.Longitude) {
+                // ExifReader typically returns raw numbers or calculated descriptions
+                // We need to parse description like "40.7128" or check value array
+                lat = tags.gps.Latitude;
+                lon = tags.gps.Longitude;
+            }
+
+            if(lat && lon) {
+                gpsData = { lat, lon };
+                document.getElementById('btnMap').style.display = 'block';
+            }
+        }
+
+        function openMap() {
+            if(!gpsData) return;
+            // Clean the data to ensure it's just numbers
+            const cleanLat = String(gpsData.lat).replace(' degrees', '');
+            const cleanLon = String(gpsData.lon).replace(' degrees', '');
+            window.open(`https://www.google.com/maps?q=${cleanLat},${cleanLon}`, '_blank');
+        }
+
+        // --- SEARCH ---
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            const term = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#metaTable tr:not(.group-header)');
+            const headers = document.querySelectorAll('.group-header');
+
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(term) ? '' : 'none';
+            });
+
+            // Hide headers if all their children are hidden
+            // (Simple visual trick: just show all headers if search is empty, else hide headers to reduce clutter)
+            headers.forEach(h => h.style.display = term === '' ? '' : 'none');
+        });
+
+        // --- EXPORT TOOLS ---
+
+        function flattenData() {
+            // Convert nested object structure to flat array for export
+            let flat = [];
+            for(let group in allTags) {
+                if(group === 'thumbnail') continue;
+                for(let key in allTags[group]) {
+                    let val = allTags[group][key];
+                    let finalVal = val.description || val.value;
+                    if(Array.isArray(finalVal)) finalVal = finalVal.join(', ');
+                    if(typeof finalVal === 'object') finalVal = JSON.stringify(finalVal);
+                    
+                    flat.push({
+                        Group: group,
+                        Tag: key,
+                        Value: String(finalVal).replace(/\n/g, ' ') // remove newlines for CSV
+                    });
+                }
+            }
+            return flat;
+        }
+
+        function downloadJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(allTags, null, 2));
+            triggerDownload(dataStr, 'metadata.json');
+        }
+
+        function downloadCSV() {
+            const data = flattenData();
+            let csvContent = "data:text/csv;charset=utf-8,Group,Tag,Value\n";
+            data.forEach(row => {
+                csvContent += `"${row.Group}","${row.Tag}","${row.Value.replace(/"/g, '""')}"\n`;
+            });
+            triggerDownload(csvContent, 'metadata.csv');
+        }
+
+        function downloadTXT() {
+            const data = flattenData();
+            let txt = `METALYZER REPORT - ${currentFile.name}\nGenerated By Aryan Giri\n---------------------------\n`;
+            data.forEach(row => {
+                txt += `[${row.Group.toUpperCase()}] ${row.Tag}: ${row.Value}\n`;
+            });
+            const blob = new Blob([txt], {type: "text/plain"});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `metadata.txt`;
+            a.click();
+        }
+
+        function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const data = flattenData().map(i => [i.Group, i.Tag, i.Value.substring(0, 80)]); // Truncate for PDF width
+
+            doc.setFontSize(16);
+            doc.setTextColor(37, 99, 235);
+            doc.text("MetaLyzer Ultimate Report", 14, 20);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(50);
+            doc.text(`File: ${currentFile.name}`, 14, 30);
+            doc.text(`Credit: Made By Aryan Giri`, 14, 35);
+
+            doc.autoTable({
+                startY: 40,
+                head: [['Group', 'Tag', 'Value']],
+                body: data,
+                theme: 'grid',
+                headStyles: { fillColor: [37, 99, 235] },
+                columnStyles: { 0: {cellWidth: 25}, 1: {cellWidth: 45} }
+            });
+
+            doc.save('metadata.pdf');
+        }
+
+        function triggerDownload(content, fileName) {
+            const encodedUri = encodeURI(content);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", fileName);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function formatBytes(bytes) {
