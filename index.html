@@ -3,525 +3,456 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MetaLyzer - Professional Metadata Forensics</title>
+    <title>MetaLyzer v6 - Location Intelligence</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.4/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/5.0.2/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         :root {
-            /* Light Theme */
-            --bg: #f3f4f6;
+            --bg: #f8fafc;
             --card: #ffffff;
-            --text: #1f2937;
-            --text-muted: #6b7280;
-            --accent: #2563eb;
-            --accent-hover: #1d4ed8;
-            --border: #e5e7eb;
+            --text: #0f172a;
+            --muted: #64748b;
+            --accent: #0ea5e9; /* Sky Blue */
+            --border: #e2e8f0;
             --success: #10b981;
             --error: #ef4444;
-            --header-bg: #ffffff;
-            --code-bg: #f9fafb;
+            --map-bg: #f0fdf4;
+            --map-text: #166534;
         }
 
         [data-theme="dark"] {
-            /* Dark Theme */
-            --bg: #111827;
-            --card: #1f2937;
-            --text: #f9fafb;
-            --text-muted: #9ca3af;
-            --accent: #3b82f6;
-            --accent-hover: #60a5fa;
-            --border: #374151;
-            --success: #34d399;
-            --error: #f87171;
-            --header-bg: #1f2937;
-            --code-bg: #111827;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --text: #f1f5f9;
+            --muted: #94a3b8;
+            --accent: #38bdf8;
+            --border: #334155;
+            --map-bg: #14532d;
+            --map-text: #bbf7d0;
         }
 
-        * { box-sizing: border-box; transition: background-color 0.2s, color 0.2s; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        * { box-sizing: border-box; transition: 0.2s ease-in-out; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
         /* HEADER */
-        header { padding: 1rem 2rem; background: var(--header-bg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 10; }
-        .logo { font-size: 1.5rem; font-weight: 800; color: var(--accent); letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
+        header { padding: 1rem 2rem; background: var(--card); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 50; }
+        .logo { font-size: 1.4rem; font-weight: 800; color: var(--accent); display: flex; align-items: center; gap: 8px; }
         .controls { display: flex; gap: 15px; align-items: center; }
         
-        .status-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 20px; font-weight: 600; display: flex; align-items: center; gap: 6px; background: var(--code-bg); border: 1px solid var(--border); }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #999; }
-        .dot.ok { background: var(--success); box-shadow: 0 0 6px var(--success); }
+        /* STATUS PILL */
+        .status-pill { font-size: 0.75rem; padding: 4px 12px; border-radius: 99px; font-weight: 600; display: flex; align-items: center; gap: 6px; background: var(--bg); border: 1px solid var(--border); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
+        .dot.ok { background: var(--success); box-shadow: 0 0 8px var(--success); }
         .dot.err { background: var(--error); }
 
-        .theme-btn { background: none; border: 1px solid var(--border); color: var(--text); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.9rem; }
-        .theme-btn:hover { background: var(--code-bg); }
-
-        /* MAIN CONTENT */
-        main { flex: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; align-items: center; }
-
-        /* DROP ZONES */
-        .container { width: 100%; max-width: 1200px; height: 100%; display: flex; flex-direction: column; }
+        /* MAIN LAYOUT */
+        main { flex: 1; overflow: hidden; display: flex; padding: 20px; gap: 20px; max-width: 1400px; margin: 0 auto; width: 100%; }
         
-        .box {
-            border: 2px dashed var(--border); border-radius: 16px;
-            background: var(--card);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 3rem; text-align: center; transition: 0.2s;
-            cursor: pointer; margin: auto; width: 100%; max-width: 600px;
+        /* DROP ZONE (Initial View) */
+        #uploadView { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .drop-box { 
+            border: 2px dashed var(--border); border-radius: 20px; background: var(--card);
+            padding: 4rem; text-align: center; cursor: pointer; max-width: 600px; width: 100%;
         }
-        .box:hover { border-color: var(--accent); transform: scale(1.01); }
-        .box h2 { margin-top: 0; margin-bottom: 0.5rem; }
-        .box p { color: var(--text-muted); }
-        .upload-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.8; }
+        .drop-box:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+        .icon-big { font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.8; }
 
-        /* MANUAL LOADER (RED BOX) */
-        #manualLoadUI { display: none; border-color: var(--error); background: rgba(239, 68, 68, 0.05); }
-        .manual-help { text-align: left; background: var(--bg); padding: 15px; border-radius: 8px; margin: 20px 0; font-size: 0.9rem; border: 1px solid var(--border); width: 100%; }
-        .manual-link { color: var(--accent); text-decoration: underline; font-weight: bold; }
+        /* MANUAL LOADER (Red Box) */
+        #manualLoadUI { display: none; width: 100%; flex-direction: column; align-items: center; justify-content: center; }
+        .manual-box { border: 2px dashed var(--error); background: rgba(239, 68, 68, 0.05); padding: 3rem; border-radius: 16px; max-width: 600px; text-align: center; }
+        .manual-link { color: var(--accent); font-weight: bold; text-decoration: underline; }
 
-        /* DASHBOARD */
+        /* DASHBOARD (Result View) */
         #dashboard { display: none; width: 100%; height: 100%; gap: 20px; }
         
         /* SIDEBAR */
-        .sidebar { width: 320px; flex-shrink: 0; display: flex; flex-direction: column; gap: 15px; }
+        .sidebar { width: 350px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 5px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
         
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .preview-img { width: 100%; height: 220px; background: #000; border-radius: 8px; object-fit: contain; display: block; margin-bottom: 10px; }
         
-        .preview-box { width: 100%; height: 200px; background: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 10px; }
-        .preview-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .no-preview { color: #666; font-size: 0.9rem; }
+        /* LOCATION CARD */
+        .loc-card { background: var(--map-bg); color: var(--map-text); border: 1px solid var(--success); }
+        .loc-item { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 4px; }
+        .loc-item:last-child { border: none; }
+        .loc-label { font-weight: bold; opacity: 0.8; }
+        .loc-val { text-align: right; font-weight: 600; }
 
-        .file-meta div { margin-bottom: 8px; font-size: 0.9rem; display: flex; justify-content: space-between; }
-        .file-meta strong { color: var(--text-muted); }
-        
-        .btn { width: 100%; padding: 10px; margin-bottom: 8px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn { width: 100%; padding: 10px; margin-top: 8px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-primary { background: var(--accent); color: white; }
-        .btn-primary:hover { background: var(--accent-hover); }
         .btn-sec { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-        .btn-sec:hover { border-color: var(--accent); }
-        .btn-map { background: #d1fae5; color: #065f46; } /* Light green */
-        [data-theme="dark"] .btn-map { background: #064e3b; color: #6ee7b7; }
+        .btn:hover { opacity: 0.9; }
 
-        /* DATA PANEL */
-        .data-panel { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        /* DATA TABLE */
+        .main-panel { flex: 1; background: var(--card); border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+        .search-bar { padding: 15px; border-bottom: 1px solid var(--border); }
+        .search-bar input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none; }
         
-        .search-area { padding: 15px; border-bottom: 1px solid var(--border); background: var(--bg); }
-        .search-input { width: 100%; padding: 10px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); outline: none; }
-        .search-input:focus { border-color: var(--accent); }
+        .table-container { flex: 1; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th, td { padding: 10px 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--accent); width: 35%; font-family: monospace; background: var(--bg); position: sticky; top: 0; }
+        td { font-family: monospace; word-break: break-all; }
+        .group-header { background: #e2e8f0; color: #334155; font-weight: bold; text-transform: uppercase; font-size: 0.8rem; padding: 15px 15px 5px; }
+        [data-theme="dark"] .group-header { background: #334155; color: #e2e8f0; }
 
-        .table-wrap { flex: 1; overflow-y: auto; padding-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        th, td { padding: 12px 20px; text-align: left; border-bottom: 1px solid var(--border); }
-        
-        th { width: 30%; color: var(--accent); font-family: monospace; font-weight: 600; vertical-align: top; }
-        td { font-family: monospace; word-break: break-all; color: var(--text); }
-        
-        .group-row th { background: var(--bg); color: var(--text); font-weight: 800; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; padding-top: 20px; border-top: 2px solid var(--border); }
-
-        /* FOOTER */
-        footer { margin-top: auto; padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.85rem; border-top: 1px solid var(--border); width: 100%; background: var(--header-bg); }
-
-        /* Responsive */
-        @media (max-width: 800px) {
-            #dashboard { flex-direction: column; }
-            .sidebar { width: 100%; }
-        }
+        /* RESPONSIVE */
+        @media (max-width: 900px) { #dashboard { flex-direction: column; overflow-y: auto; } .sidebar { width: 100%; } }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo">
-            <span>🔍</span> MetaLyzer
-        </div>
+        <div class="logo"><span>🌍</span> MetaLyzer v6</div>
         <div class="controls">
-            <div class="status-badge">
-                <div id="statusDot" class="dot"></div>
-                <span id="statusText">Initializing...</span>
-            </div>
-            <button id="themeToggle" class="theme-btn">🌙</button>
+            <div class="status-pill"><div id="statusDot" class="dot"></div> <span id="statusText">Init...</span></div>
+            <button onclick="toggleTheme()" class="btn-sec" style="margin:0; padding: 5px 10px;">🌓</button>
         </div>
     </header>
 
     <main>
-        <div class="container">
-            
-            <div id="dropZone" class="box" style="display:none;">
-                <div class="upload-icon">📂</div>
-                <h2>Analyze File</h2>
-                <p>Drag & Drop Images, Videos, PDFs</p>
-                <button class="btn btn-primary" style="width: auto; padding: 8px 30px; margin-top: 15px;">Browse</button>
-                <input type="file" id="fileInput" style="display:none;">
+        <div id="uploadView">
+            <div id="dropZone" class="drop-box">
+                <div class="icon-big">📂</div>
+                <h2>Drag & Drop File</h2>
+                <p style="color:var(--muted)">Images, Videos, PDFs supported</p>
+                <input type="file" id="fileInput" style="display:none">
             </div>
+        </div>
 
-            <div id="manualLoadUI" class="box">
-                <div class="upload-icon" style="color:var(--error)">⚠️</div>
-                <h2 style="color:var(--error)">Network Blocked Libraries</h2>
-                <div class="manual-help">
-                    <strong>Automatic loading failed. Please load manually:</strong><br><br>
+        <div id="manualLoadUI">
+            <div class="manual-box">
+                <h2 style="color:var(--error)">Network Blocked</h2>
+                <p>Automatic library loading failed. Load manually:</p>
+                <div style="background:var(--bg); padding:15px; border-radius:8px; margin:20px 0; text-align:left; font-size:0.9rem;">
                     1. <a href="https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js" target="_blank" class="manual-link">Download 'exif-reader.min.js'</a><br>
-                    2. Drag the downloaded file into the box below.
+                    2. Drag that file into the box below.
                 </div>
-                <div style="border: 2px dashed #999; padding: 20px; width: 100%; border-radius: 8px; opacity: 0.7;">
-                    ⬇️ Drop <b>exif-reader.min.js</b> Here
+                <div id="manualDrop" style="border:2px dashed #777; padding:20px; border-radius:8px;">⬇️ Drop JS File Here</div>
+            </div>
+        </div>
+
+        <div id="dashboard">
+            <div class="sidebar">
+                <div class="card">
+                    <img id="previewImg" class="preview-img" style="display:none">
+                    <div id="noPreview" style="height:200px; display:flex; align-items:center; justify-content:center; color:var(--muted); background:#000; border-radius:8px;">No Preview</div>
+                    <div style="margin-top:10px;">
+                        <div class="loc-item"><span class="loc-label">File:</span> <span class="loc-val" id="dispName">-</span></div>
+                        <div class="loc-item"><span class="loc-label">Size:</span> <span class="loc-val" id="dispSize">-</span></div>
+                    </div>
+                </div>
+
+                <div class="card loc-card" id="locCard" style="display:none;">
+                    <div style="font-weight:bold; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                        📍 Location Data <span style="font-size:0.7em; opacity:0.7">VIA OSM</span>
+                    </div>
+                    <div id="locData">
+                        <div style="text-align:center; padding:10px;">Fetching address...</div>
+                    </div>
+                    <a id="gmapsLink" href="#" target="_blank" class="btn" style="background:white; color:var(--map-text); border:1px solid var(--success); text-decoration:none; margin-top:10px;">View on Google Maps</a>
+                </div>
+
+                <div class="card">
+                    <button class="btn btn-sec" onclick="exportJSON()">{} Export JSON</button>
+                    <button class="btn btn-sec" onclick="exportCSV()">📊 Export CSV</button>
+                    <button class="btn btn-primary" onclick="exportPDF()">📄 Export PDF Report</button>
+                    <button class="btn btn-sec" style="margin-top:10px; color:var(--error); border-color:var(--error)" onclick="location.reload()">Reset</button>
                 </div>
             </div>
 
-            <div id="dashboard">
-                <div class="sidebar">
-                    <div class="card">
-                        <div class="preview-box" id="thumbBox"><span class="no-preview">No Preview</span></div>
-                        <div class="file-meta">
-                            <div><strong>Name:</strong> <span id="metaName">-</span></div>
-                            <div><strong>Size:</strong> <span id="metaSize">-</span></div>
-                            <div><strong>Type:</strong> <span id="metaType">-</span></div>
-                        </div>
-                    </div>
-                    
-                    <button id="btnMap" class="btn btn-map" style="display:none;" onclick="openMap()">📍 View on Google Maps</button>
-
-                    <div class="card">
-                        <button class="btn btn-sec" onclick="exportJSON()">{} Export JSON</button>
-                        <button class="btn btn-sec" onclick="exportCSV()">📊 Export CSV</button>
-                        <button class="btn btn-sec" onclick="exportTXT()">📝 Export TXT</button>
-                        <button class="btn btn-primary" onclick="exportPDF()">📄 Export PDF</button>
-                        <button class="btn btn-sec" style="margin-top:10px; color:var(--error); border-color:var(--error)" onclick="location.reload()">Reset Tool</button>
-                    </div>
+            <div class="main-panel">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Search tags (e.g. 'ISO', 'Date', 'Lens')...">
                 </div>
-
-                <div class="data-panel">
-                    <div class="search-area">
-                        <input type="text" id="searchInput" class="search-input" placeholder="Filter metadata tags (e.g., 'Model', 'Date', 'GPS')...">
-                    </div>
-                    <div class="table-wrap">
-                        <table id="metaTable">
-                            </table>
-                    </div>
+                <div class="table-container">
+                    <table id="metaTable"></table>
                 </div>
             </div>
-
         </div>
     </main>
 
-    <footer>
-        Made By Aryan Giri
-    </footer>
-
     <script>
-        /* -------------------------------------------------------------------------- */
-        /* CONFIG & STATE                               */
-        /* -------------------------------------------------------------------------- */
+        // --- CONFIG ---
         const LIB_URLS = [
-            "https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js", // Primary
-            "https://unpkg.com/exifreader@4.33.1/dist/exif-reader.min.js"             // Backup
+            "https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js",
+            "https://unpkg.com/exifreader@4.33.1/dist/exif-reader.min.js"
         ];
 
+        let currentTags = {};
         let currentFile = null;
-        let allTags = {};
-        let gpsCoords = null;
+        let enrichedLocation = {}; // Stores fetched city/country
 
+        // --- DOM ELEMENTS ---
         const UI = {
+            dropZone: document.getElementById('dropZone'),
+            fileInput: document.getElementById('fileInput'),
+            uploadView: document.getElementById('uploadView'),
+            manualLoadUI: document.getElementById('manualLoadUI'),
+            manualDrop: document.getElementById('manualDrop'),
+            dashboard: document.getElementById('dashboard'),
+            table: document.getElementById('metaTable'),
+            preview: document.getElementById('previewImg'),
+            noPreview: document.getElementById('noPreview'),
             statusDot: document.getElementById('statusDot'),
             statusText: document.getElementById('statusText'),
-            dropZone: document.getElementById('dropZone'),
-            manualBox: document.getElementById('manualLoadUI'),
-            dashboard: document.getElementById('dashboard'),
-            input: document.getElementById('fileInput'),
-            table: document.getElementById('metaTable'),
-            thumb: document.getElementById('thumbBox'),
-            mapBtn: document.getElementById('btnMap')
+            locCard: document.getElementById('locCard'),
+            locData: document.getElementById('locData'),
+            gmapsLink: document.getElementById('gmapsLink')
         };
 
-        /* -------------------------------------------------------------------------- */
-        /* 1. RESILIENT LOADER                             */
-        /* -------------------------------------------------------------------------- */
-        async function initSystem() {
-            if (window.ExifReader) { activateTool(); return; }
-
-            for (const url of LIB_URLS) {
-                UI.statusText.innerText = `Connecting: ${new URL(url).hostname}...`;
+        // --- 1. LOADER SYSTEM ---
+        async function init() {
+            if(window.ExifReader) { ready(); return; }
+            
+            for(let url of LIB_URLS) {
+                UI.statusText.innerText = `Loading: ${new URL(url).hostname}`;
                 try {
                     await loadScript(url);
-                    if (window.ExifReader) { activateTool(); return; }
-                } catch (e) { console.warn("Blocked:", url); }
+                    if(window.ExifReader) { ready(); return; }
+                } catch(e) { console.log("Blocked:", url); }
             }
 
-            // If we reach here, all failed
+            // Failed
             UI.statusDot.className = "dot err";
-            UI.statusText.innerText = "Network Block";
-            UI.dropZone.style.display = 'none';
-            UI.manualBox.style.display = 'flex';
-            setupManualLoader();
+            UI.statusText.innerText = "Blocked";
+            UI.uploadView.style.display = 'none';
+            UI.manualLoadUI.style.display = 'flex';
+            setupManual();
         }
 
         function loadScript(src) {
             return new Promise((resolve, reject) => {
-                const s = document.createElement('script');
-                s.src = src;
-                s.onload = resolve;
-                s.onerror = reject;
-                document.head.appendChild(s);
+                const s = document.createElement('script'); s.src = src;
+                s.onload = resolve; s.onerror = reject; document.head.appendChild(s);
             });
         }
 
-        function activateTool() {
+        function ready() {
             UI.statusDot.className = "dot ok";
-            UI.statusText.innerText = "System Ready";
-            UI.manualBox.style.display = 'none';
-            UI.dropZone.style.display = 'flex';
-            setupFileHandlers();
+            UI.statusText.innerText = "Ready";
+            UI.manualLoadUI.style.display = 'none';
+            UI.uploadView.style.display = 'flex';
+            
+            // Listeners
+            UI.dropZone.onclick = () => UI.fileInput.click();
+            UI.fileInput.onchange = e => process(e.target.files[0]);
+            UI.dropZone.ondragover = e => { e.preventDefault(); UI.dropZone.style.borderColor = 'var(--accent)'; };
+            UI.dropZone.ondragleave = () => UI.dropZone.style.borderColor = 'var(--border)';
+            UI.dropZone.ondrop = e => { e.preventDefault(); process(e.dataTransfer.files[0]); };
         }
 
-        /* -------------------------------------------------------------------------- */
-        /* 2. MANUAL LOADER                                */
-        /* -------------------------------------------------------------------------- */
-        function setupManualLoader() {
-            UI.manualBox.addEventListener('dragover', e => { e.preventDefault(); UI.manualBox.style.borderColor = 'var(--accent)'; });
-            UI.manualBox.addEventListener('dragleave', () => UI.manualBox.style.borderColor = 'var(--error)');
-            UI.manualBox.addEventListener('drop', e => {
+        function setupManual() {
+            UI.manualDrop.ondragover = e => e.preventDefault();
+            UI.manualDrop.ondrop = e => {
                 e.preventDefault();
-                const file = e.dataTransfer.files[0];
-                if (!file) return;
-
                 const reader = new FileReader();
-                reader.onload = (ev) => {
-                    try {
-                        const script = document.createElement('script');
-                        script.innerHTML = ev.target.result;
-                        document.head.appendChild(script);
-                        setTimeout(() => {
-                            if (window.ExifReader) activateTool();
-                            else alert("Script loaded but Engine not found. Wrong file?");
-                        }, 50);
-                    } catch (err) { alert("Error parsing script."); }
+                reader.onload = ev => {
+                    const s = document.createElement('script'); s.innerHTML = ev.target.result;
+                    document.head.appendChild(s);
+                    setTimeout(() => { if(window.ExifReader) ready(); else alert("Error loading engine."); }, 100);
                 };
-                reader.readAsText(file);
-            });
+                reader.readAsText(e.dataTransfer.files[0]);
+            };
         }
 
-        /* -------------------------------------------------------------------------- */
-        /* 3. MAIN LOGIC                                 */
-        /* -------------------------------------------------------------------------- */
-        function setupFileHandlers() {
-            // Click
-            UI.dropZone.onclick = () => UI.input.click();
-            UI.input.onchange = e => processFile(e.target.files[0]);
-
-            // Drag
-            UI.dropZone.ondragover = e => { e.preventDefault(); UI.dropZone.style.borderColor = 'var(--accent)'; UI.dropZone.style.transform = 'scale(1.02)'; };
-            UI.dropZone.ondragleave = () => { UI.dropZone.style.borderColor = 'var(--border)'; UI.dropZone.style.transform = 'scale(1)'; };
-            UI.dropZone.ondrop = e => { e.preventDefault(); processFile(e.dataTransfer.files[0]); };
-        }
-
-        async function processFile(file) {
-            if (!file) return;
+        // --- 2. PROCESSING ENGINE ---
+        async function process(file) {
+            if(!file) return;
             currentFile = file;
+            enrichedLocation = {}; // Reset
 
-            // Switch Views
-            UI.dropZone.style.display = 'none';
-            UI.dashboard.style.display = 'flex'; // Changed to flex to keep layout
-
-            // Basic Info
-            document.getElementById('metaName').innerText = file.name;
-            document.getElementById('metaSize').innerText = (file.size / 1024).toFixed(2) + " KB";
-            document.getElementById('metaType').innerText = file.type || "Unknown";
-            UI.table.innerHTML = '<tr><td colspan="2">Scanning deep metadata...</td></tr>';
-            UI.mapBtn.style.display = 'none';
+            // Switch UI
+            UI.uploadView.style.display = 'none';
+            UI.dashboard.style.display = 'flex';
+            
+            document.getElementById('dispName').innerText = file.name;
+            document.getElementById('dispSize').innerText = (file.size/1024).toFixed(2) + " KB";
+            UI.table.innerHTML = '<tr><td colspan="2">Scanning...</td></tr>';
+            UI.locCard.style.display = 'none';
 
             try {
-                // THE CORE: ExifReader with expanded: true
+                // Expanded = true for Deep Scan
                 const tags = await ExifReader.load(file, { expanded: true });
-                allTags = tags;
-
+                currentTags = tags;
+                
                 renderTable(tags);
                 renderPreview(tags, file);
-                checkGPS(tags);
+                await analyzeLocation(tags); // New Location Engine
 
-            } catch (err) {
-                UI.table.innerHTML = `<tr><td colspan="2" style="color:var(--error)">Error: ${err.message}</td></tr>`;
+            } catch(e) {
+                UI.table.innerHTML = `<tr><td style="color:red">Error: ${e.message}</td></tr>`;
             }
         }
 
         function renderTable(tags) {
             UI.table.innerHTML = '';
             const groups = Object.keys(tags).sort();
+            
+            if(groups.length === 0) { UI.table.innerHTML = '<tr><td>No Data</td></tr>'; return; }
 
-            if (groups.length === 0) {
-                UI.table.innerHTML = '<tr><td colspan="2">No Metadata Found</td></tr>';
-                return;
-            }
+            groups.forEach(g => {
+                if(g === 'thumbnail') return;
+                
+                const h = document.createElement('tr');
+                h.innerHTML = `<td colspan="2" class="group-header">${g}</td>`;
+                UI.table.appendChild(h);
 
-            groups.forEach(group => {
-                if (group === 'thumbnail') return;
-
-                // Group Header
-                const hRow = document.createElement('tr');
-                hRow.className = 'group-row';
-                hRow.innerHTML = `<th colspan="2">${group.toUpperCase()}</th>`;
-                UI.table.appendChild(hRow);
-
-                // Rows
-                for (let key in tags[group]) {
-                    let val = tags[group][key].description || tags[group][key].value;
+                for(let k in tags[g]) {
+                    let v = tags[g][k].description || tags[g][k].value;
+                    if(Array.isArray(v)) v = `[${v.join(', ')}]`;
+                    if(typeof v === 'object') v = JSON.stringify(v);
                     
-                    // Format Arrays/Objects
-                    if (Array.isArray(val)) val = `[${val.join(', ')}]`;
-                    if (typeof val === 'object') val = JSON.stringify(val);
-                    
-                    // Truncate huge strings
-                    let displayVal = String(val);
-                    if(displayVal.length > 500) displayVal = displayVal.substring(0, 500) + '... (truncated)';
-
-                    const row = document.createElement('tr');
-                    row.innerHTML = `<th>${key}</th><td>${displayVal}</td>`;
-                    UI.table.appendChild(row);
+                    const r = document.createElement('tr');
+                    r.innerHTML = `<th>${k}</th><td>${String(v).substring(0,300)}</td>`;
+                    UI.table.appendChild(r);
                 }
             });
         }
 
         function renderPreview(tags, file) {
-            UI.thumb.innerHTML = '';
-            if (tags.thumbnail) {
-                const img = document.createElement('img');
-                img.src = tags.thumbnail; // Base64 from ExifReader
-                UI.thumb.appendChild(img);
-            } else if (file.type.startsWith('image/')) {
-                const img = document.createElement('img');
-                img.src = URL.createObjectURL(file);
-                UI.thumb.appendChild(img);
+            if(tags.thumbnail) {
+                UI.preview.src = tags.thumbnail;
+                UI.preview.style.display = 'block'; UI.noPreview.style.display = 'none';
+            } else if(file.type.startsWith('image/')) {
+                UI.preview.src = URL.createObjectURL(file);
+                UI.preview.style.display = 'block'; UI.noPreview.style.display = 'none';
             } else {
-                UI.thumb.innerHTML = '<span class="no-preview">No Preview</span>';
+                UI.preview.style.display = 'none'; UI.noPreview.style.display = 'flex';
             }
         }
 
-        function checkGPS(tags) {
-            // Check for common GPS keys in expanded mode (usually under 'gps' group)
-            if (tags.gps && tags.gps.Latitude && tags.gps.Longitude) {
-                gpsCoords = {
-                    lat: tags.gps.Latitude,
-                    lon: tags.gps.Longitude
-                };
-                UI.mapBtn.style.display = 'block';
-            }
-        }
+        // --- 3. LOCATION INTELLIGENCE (Reverse Geocoding) ---
+        async function analyzeLocation(tags) {
+            // 1. Check if GPS exists
+            if(tags.gps && tags.gps.Latitude && tags.gps.Longitude) {
+                const lat = tags.gps.Latitude;
+                const lon = tags.gps.Longitude;
+                
+                UI.locCard.style.display = 'block';
+                UI.locData.innerHTML = `<div style="text-align:center; opacity:0.6">Found GPS: ${lat.toFixed(4)}, ${lon.toFixed(4)}<br>Resolving Address...</div>`;
+                UI.gmapsLink.href = `https://www.google.com/maps?q=${lat},${lon}`;
 
-        function openMap() {
-            if (gpsCoords) {
-                // Ensure coordinates are clean
-                const lat = parseFloat(String(gpsCoords.lat).replace(' degrees', ''));
-                const lon = parseFloat(String(gpsCoords.lon).replace(' degrees', ''));
-                window.open(`https://www.google.com/maps?q=${lat},${lon}`, '_blank');
-            }
-        }
+                // 2. Fetch City/Country from OpenStreetMap (Nominatim)
+                // This is strictly client-side fetch
+                try {
+                    const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                    const data = await resp.json();
+                    
+                    if(data && data.address) {
+                        const addr = data.address;
+                        
+                        // Populate UI
+                        let html = '';
+                        if(addr.country) html += locRow('Country', addr.country);
+                        if(addr.state) html += locRow('State', addr.state);
+                        if(addr.city || addr.town || addr.village) html += locRow('City/Town', addr.city || addr.town || addr.village);
+                        if(addr.road) html += locRow('Street', addr.road);
+                        if(addr.postcode) html += locRow('Zip', addr.postcode);
 
-        /* -------------------------------------------------------------------------- */
-        /* EXPORTERS                                   */
-        /* -------------------------------------------------------------------------- */
-        function getFlatData() {
-            let data = [];
-            for (let g in allTags) {
-                if (g === 'thumbnail') continue;
-                for (let k in allTags[g]) {
-                    let v = allTags[g][k].description || allTags[g][k].value;
-                    data.push({ Group: g, Tag: k, Value: String(v) });
+                        UI.locData.innerHTML = html;
+                        
+                        // Save for Export
+                        enrichedLocation = {
+                            "Calculated Country": addr.country,
+                            "Calculated City": addr.city || addr.town || addr.village,
+                            "Calculated Address": data.display_name
+                        };
+                    } else {
+                        UI.locData.innerHTML = `<div style="text-align:center; color:#f59e0b">Address lookup failed (No Data).</div>`;
+                    }
+                } catch(err) {
+                    UI.locData.innerHTML = `<div style="text-align:center; color:#ef4444">Offline: Could not resolve address.</div>`;
                 }
             }
-            return data;
+        }
+
+        function locRow(label, val) {
+            return `<div class="loc-item"><span class="loc-label">${label}:</span> <span class="loc-val">${val}</span></div>`;
+        }
+
+        // --- 4. SEARCH ---
+        document.getElementById('searchInput').addEventListener('keyup', (e) => {
+            const term = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#metaTable tr');
+            rows.forEach(r => {
+                if(r.querySelector('.group-header')) return; // skip headers
+                r.style.display = r.innerText.toLowerCase().includes(term) ? '' : 'none';
+            });
+        });
+
+        // --- 5. EXPORTERS (Includes Enriched Location) ---
+        function getExportData() {
+            // Merge raw tags with our enriched location data
+            let flat = [];
+            // Add Enriched first
+            for(let k in enrichedLocation) flat.push(["LOCATION_INTEL", k, enrichedLocation[k]]);
+            
+            // Add Raw
+            for(let g in currentTags) {
+                if(g === 'thumbnail') continue;
+                for(let k in currentTags[g]) {
+                    let v = currentTags[g][k].description || currentTags[g][k].value;
+                    flat.push([g, k, String(v)]);
+                }
+            }
+            return flat;
         }
 
         function exportJSON() {
-            saveFile(JSON.stringify(allTags, null, 2), 'metadata.json', 'application/json');
+            const finalData = { ...currentTags, LocationIntel: enrichedLocation };
+            save(JSON.stringify(finalData, null, 2), 'meta.json', 'application/json');
         }
 
         function exportCSV() {
             let csv = "Group,Tag,Value\n";
-            getFlatData().forEach(item => {
-                // Escape quotes
-                const safeVal = item.Value.replace(/"/g, '""').replace(/\n/g, ' ');
-                csv += `"${item.Group}","${item.Tag}","${safeVal}"\n`;
+            getExportData().forEach(row => {
+                csv += `"${row[0]}","${row[1]}","${row[2].replace(/"/g, '""').replace(/\n/g, ' ')}"\n`;
             });
-            saveFile(csv, 'metadata.csv', 'text/csv');
-        }
-
-        function exportTXT() {
-            let txt = `METALYZER REPORT\nFile: ${currentFile.name}\n----------------\n`;
-            for (let g in allTags) {
-                if (g === 'thumbnail') continue;
-                txt += `\n[${g.toUpperCase()}]\n`;
-                for (let k in allTags[g]) {
-                    let v = allTags[g][k].description || allTags[g][k].value;
-                    txt += `${k}: ${v}\n`;
-                }
-            }
-            saveFile(txt, 'metadata.txt', 'text/plain');
+            save(csv, 'meta.csv', 'text/csv');
         }
 
         function exportPDF() {
-            if (!window.jspdf) {
-                alert("PDF Library failed to load due to network settings. Use TXT/CSV instead.");
-                return;
-            }
+            if(!window.jspdf) { alert("PDF Lib Missing"); return; }
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-            
-            // Header
-            doc.setFontSize(18);
-            doc.setTextColor(37, 99, 235);
-            doc.text("MetaLyzer Report", 14, 20);
-            
-            doc.setFontSize(10);
-            doc.setTextColor(80);
-            doc.text(`File: ${currentFile.name}`, 14, 30);
-            doc.text("Made By Aryan Giri", 14, 35);
 
-            // Table
-            const body = getFlatData().map(i => [i.Group, i.Tag, i.Value.substring(0, 80)]);
+            doc.setTextColor(14, 165, 233); doc.setFontSize(16); doc.text("MetaLyzer Report", 14, 20);
+            doc.setTextColor(80); doc.setFontSize(10); 
+            doc.text(`File: ${currentFile.name}`, 14, 28);
             
+            // If we have address, print it at top
+            if(enrichedLocation["Calculated Address"]) {
+                const addr = doc.splitTextToSize("Loc: " + enrichedLocation["Calculated Address"], 180);
+                doc.text(addr, 14, 34);
+            }
+
             doc.autoTable({
-                startY: 40,
+                startY: 45,
                 head: [['Group', 'Tag', 'Value']],
-                body: body,
+                body: getExportData(),
                 theme: 'grid',
-                headStyles: { fillColor: [37, 99, 235] },
-                columnStyles: { 0: {cellWidth: 25}, 1: {cellWidth: 40} }
+                headStyles: { fillColor: [14, 165, 233] },
+                columnStyles: { 0: {cellWidth: 30}, 1: {cellWidth: 40} }
             });
-
-            doc.save('metadata.pdf');
+            doc.save('meta_report.pdf');
         }
 
-        function saveFile(content, name, type) {
-            const blob = new Blob([content], { type: type });
+        function save(content, name, type) {
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = name;
-            a.click();
+            a.href = URL.createObjectURL(new Blob([content], {type:type}));
+            a.download = name; a.click();
         }
 
-        /* -------------------------------------------------------------------------- */
-        /* UTILITIES                                   */
-        /* -------------------------------------------------------------------------- */
-        // Theme Toggle
-        const themeBtn = document.getElementById('themeToggle');
-        if (localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
-
-        themeBtn.onclick = () => {
+        function toggleTheme() {
             const isDark = document.body.getAttribute('data-theme') === 'dark';
             document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
-            localStorage.setItem('theme', isDark ? 'light' : 'dark');
-        };
+        }
 
-        // Search Filter
-        document.getElementById('searchInput').addEventListener('keyup', (e) => {
-            const term = e.target.value.toLowerCase();
-            document.querySelectorAll('#metaTable tr').forEach(row => {
-                if (row.classList.contains('group-row')) return; // Always show headers initially
-                const text = row.innerText.toLowerCase();
-                row.style.display = text.includes(term) ? '' : 'none';
-            });
-            // Optional: Hide empty headers logic could go here
-        });
-
-        // Initialize
-        initSystem();
+        // Start
+        init();
 
     </script>
 </body>
