@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MetaLyzer v9 - Precision GPS Edition</title>
+    <title>MetaLyzer v10 - Deep Search GPS</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.4/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/5.0.2/jspdf.plugin.autotable.min.js"></script>
@@ -14,11 +14,10 @@
             --surface: #ffffff;
             --text: #0f172a;
             --muted: #64748b;
-            --accent: #2563eb;
+            --brand: #2563eb;
             --border: #e2e8f0;
             --success: #16a34a;
             --error: #dc2626;
-            --warn: #ca8a04;
         }
 
         [data-theme="dark"] {
@@ -26,146 +25,160 @@
             --surface: #1e293b;
             --text: #f8fafc;
             --muted: #94a3b8;
-            --accent: #60a5fa;
+            --brand: #60a5fa;
             --border: #334155;
         }
 
-        body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
         * { box-sizing: border-box; }
 
         /* HEADER */
-        header { padding: 15px 25px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .brand { font-size: 1.4rem; font-weight: 800; color: var(--accent); display: flex; align-items: center; gap: 10px; }
-        .controls { display: flex; gap: 10px; align-items: center; }
-        .badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--border); display: flex; align-items: center; gap: 5px; font-weight: 600; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; }
+        header { padding: 1rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.4rem; font-weight: 800; color: var(--brand); display: flex; gap: 8px; align-items: center; }
+        
+        .badge { font-size: 0.75rem; background: var(--bg); border: 1px solid var(--border); padding: 4px 10px; border-radius: 99px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #999; }
+        .dot.ok { background: var(--success); box-shadow: 0 0 5px var(--success); }
+        .dot.err { background: var(--error); }
+
+        .theme-btn { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-left: 10px; }
+        .theme-btn:hover { background: var(--bg); }
 
         /* MAIN */
         main { flex: 1; padding: 20px; overflow: hidden; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 1600px; margin: 0 auto; }
 
         /* UPLOAD */
-        #view-upload { width: 100%; max-width: 600px; margin-top: 10vh; }
+        #viewUpload { width: 100%; max-width: 600px; margin-top: 10vh; display: flex; flex-direction: column; gap: 20px; }
         .drop-box { 
-            border: 2px dashed var(--border); background: var(--surface); border-radius: 16px; padding: 4rem 2rem; 
-            text-align: center; cursor: pointer; transition: 0.2s;
+            background: var(--surface); border: 2px dashed var(--border); border-radius: 16px; 
+            padding: 4rem 2rem; text-align: center; cursor: pointer; transition: 0.2s;
         }
-        .drop-box:hover { border-color: var(--accent); transform: scale(1.01); }
-
-        /* MANUAL LOADER */
-        #view-manual { display: none; width: 100%; max-width: 600px; margin-top: 5vh; }
-        .err-box { border: 2px dashed var(--error); background: rgba(220, 38, 38, 0.05); padding: 2rem; border-radius: 12px; text-align: center; }
-        .d-link { color: var(--accent); font-weight: bold; text-decoration: underline; }
+        .drop-box:hover { border-color: var(--brand); transform: translateY(-3px); }
+        
+        /* MANUAL LOAD */
+        #viewManual { display: none; width: 100%; max-width: 600px; margin-top: 5vh; }
+        .err-card { border: 2px dashed var(--error); background: rgba(220, 38, 38, 0.05); padding: 2rem; border-radius: 12px; text-align: center; }
+        .link { color: var(--brand); font-weight: bold; text-decoration: underline; }
 
         /* DASHBOARD */
-        #view-dash { display: none; width: 100%; height: 100%; gap: 20px; }
+        #viewDash { display: none; width: 100%; height: 100%; gap: 20px; }
         
-        .col-left { width: 340px; display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; overflow-y: auto; }
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-
+        .sidebar { width: 340px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; flex-shrink: 0; padding-bottom: 20px; }
+        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        
+        /* PREVIEW */
         .thumb { width: 100%; height: 200px; background: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 10px; }
-        .thumb img { max-width: 100%; max-height: 100%; }
+        .thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-        /* LOCATION CARD */
-        .gps-stat { font-weight: bold; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
-        .gps-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 3px 0; }
-        .gps-key { opacity: 0.7; }
-        .gps-val { font-weight: 600; text-align: right; }
+        /* LOCATION UI */
+        .map-card { background: #ecfdf5; border: 1px solid #6ee7b7; color: #064e3b; }
+        [data-theme="dark"] .map-card { background: #064e3b; border-color: #059669; color: #d1fae5; }
         
-        .btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 5px; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .btn-pri { background: var(--accent); color: white; }
+        .addr-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .addr-key { font-weight: 600; opacity: 0.8; }
+        
+        /* BUTTONS */
+        .btn { width: 100%; padding: 10px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; margin-top: 8px; font-size: 0.9rem; }
+        .btn-pri { background: var(--brand); color: white; }
         .btn-sec { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
-        .btn-map { background: #dcfce7; color: #166534; border: 1px solid #16a34a; }
-        [data-theme="dark"] .btn-map { background: #14532d; color: #bbf7d0; border-color: #16a34a; }
+        .btn-map { background: white; color: #059669; border: 1px solid #059669; margin-top: 10px; }
 
-        /* DATA TABLE */
-        .col-right { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+        /* TABLE */
+        .data-area { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
         .search-wrap { padding: 10px; border-bottom: 1px solid var(--border); background: var(--bg); }
-        .search-box { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+        .search-inp { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
         
-        .table-wrap { flex: 1; overflow-y: auto; }
+        .table-scroll { flex: 1; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th, td { padding: 8px 15px; text-align: left; border-bottom: 1px solid var(--border); }
-        th { color: var(--accent); width: 30%; position: sticky; top: 0; background: var(--surface); }
+        th, td { padding: 10px 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { width: 35%; color: var(--brand); font-family: monospace; position: sticky; top: 0; background: var(--surface); z-index: 2; }
         td { font-family: monospace; word-break: break-all; }
-        .grp { background: var(--border); color: var(--text); font-weight: 800; font-size: 0.7rem; text-transform: uppercase; padding: 5px 15px; }
+        .grp-hdr { background: var(--border); color: var(--text); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding: 6px 15px; }
 
         footer { margin-top: auto; padding: 15px; text-align: center; color: var(--muted); font-size: 0.8rem; background: var(--surface); border-top: 1px solid var(--border); width: 100%; }
+        
+        /* Loading Spinner */
+        .spinner { border: 3px solid rgba(0,0,0,0.1); border-left-color: var(--brand); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display:inline-block; vertical-align:middle; margin-right:5px;}
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        @media (max-width: 900px) { #view-dash { flex-direction: column; } .col-left { width: 100%; } }
+        @media (max-width: 900px) { #viewDash { flex-direction: column; } .sidebar { width: 100%; } }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="brand"><span>🛰️</span> MetaLyzer v9</div>
+        <div class="logo"><span>🌍</span> MetaLyzer v10</div>
         <div class="controls">
-            <div class="badge"><div id="dot" class="dot" style="background:#999"></div> <span id="status">Init...</span></div>
-            <button onclick="toggleTheme()" class="btn-sec" style="padding: 5px 10px; margin:0;">🌓</button>
+            <div class="badge"><div id="dot" class="dot"></div> <span id="status">Init...</span></div>
+            <button id="themeToggle" class="theme-btn">🌓 Theme</button>
         </div>
     </header>
 
     <main>
-        <div id="view-upload">
-            <div id="drop-zone" class="drop-box">
-                <div style="font-size:3rem; opacity:0.7">📂</div>
+        <div id="viewUpload">
+            <div id="dropZone" class="drop-box">
+                <div style="font-size:3rem; opacity:0.7; margin-bottom:1rem;">📂</div>
                 <h2>Analyze File</h2>
-                <p>Drag & Drop Images, Video, PDF</p>
-                <input type="file" id="file-in" style="display:none">
+                <p style="color:var(--muted)">Images, Videos, PDF</p>
+                <input type="file" id="fileInput" style="display:none">
             </div>
         </div>
 
-        <div id="view-manual">
-            <div class="err-box">
+        <div id="viewManual">
+            <div class="err-card">
                 <h2 style="color:var(--error)">⚠️ Network Blocked</h2>
-                <p>Auto-load failed. Please load manually:</p>
-                <div style="background:var(--bg); padding:10px; text-align:left; border-radius:6px; margin:15px 0;">
-                    1. <a href="https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js" target="_blank" class="d-link">Download library file</a><br>
+                <p>Auto-loading failed. Load library manually:</p>
+                <div style="background:var(--bg); padding:15px; border-radius:8px; margin:20px 0; text-align:left;">
+                    1. <a href="https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js" target="_blank" class="link">Download Library File</a><br>
                     2. Drag it into the box below.
                 </div>
-                <div id="manual-drop" style="border:2px dashed #777; padding:15px; border-radius:6px;">⬇️ Drop JS Here</div>
+                <div id="manualDrop" style="border:2px dashed #777; padding:20px; border-radius:8px; cursor:pointer;">
+                    ⬇️ Drop <b>exif-reader.min.js</b> Here
+                </div>
             </div>
         </div>
 
-        <div id="view-dash">
-            <div class="col-left">
-                <div class="card">
+        <div id="viewDash">
+            <div class="sidebar">
+                <div class="panel">
                     <div class="thumb" id="thumb"><span style="color:#666">No Preview</span></div>
-                    <div style="font-size:0.85rem;">
-                        <div class="gps-row"><span>File:</span> <strong id="fname">-</strong></div>
-                        <div class="gps-row"><span>Size:</span> <span id="fsize">-</span></div>
+                    <div style="font-size:0.9rem; display:flex; justify-content:space-between;">
+                        <span id="fName" style="font-weight:bold">-</span>
+                        <span id="fSize" style="opacity:0.7">-</span>
                     </div>
                 </div>
 
-                <div class="card" id="gps-card" style="display:none; border-left: 4px solid var(--success);">
-                    <div class="gps-stat" style="color:var(--success)">
-                        <span>📍 GPS Detected</span>
+                <div class="panel map-card" id="locPanel" style="display:none;">
+                    <div style="font-weight:700; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>📍 Location Intel</span>
+                        <span style="font-size:0.7rem; opacity:0.8">GPS FOUND</span>
                     </div>
-                    <div id="gps-data">Loading Address...</div>
+                    <div id="addrData">
+                        <div style="text-align:center;"><div class="spinner"></div> Resolving Address...</div>
+                    </div>
                     <button class="btn btn-map" onclick="openMap()">View on Google Maps</button>
                 </div>
-                
-                <div class="card" id="no-gps-msg" style="display:none; border-left: 4px solid var(--warn);">
-                    <div class="gps-stat" style="color:var(--warn)">
-                        <span>⚠️ No GPS Data</span>
-                    </div>
-                    <div style="font-size:0.8rem; opacity:0.8">This file contains no embedded location coordinates.</div>
+
+                <div class="panel" id="noGpsPanel" style="display:none; border-left:4px solid #f59e0b;">
+                    <div style="color:#f59e0b; font-weight:bold; margin-bottom:5px;">⚠️ No GPS Data</div>
+                    <div style="font-size:0.85rem;">Deep search found no coordinates in this file.</div>
                 </div>
 
-                <div class="card">
-                    <button class="btn btn-sec" onclick="dl('json')">{} JSON</button>
-                    <button class="btn btn-sec" onclick="dl('csv')">📊 CSV</button>
-                    <button class="btn btn-sec" onclick="dl('txt')">📝 TXT</button>
-                    <button class="btn btn-pri" onclick="dl('pdf')">📄 PDF Report</button>
+                <div class="panel">
+                    <button class="btn btn-sec" onclick="exportJSON()">{} JSON</button>
+                    <button class="btn btn-sec" onclick="exportCSV()">📊 CSV</button>
+                    <button class="btn btn-sec" onclick="exportTXT()">📝 TXT</button>
+                    <button class="btn btn-pri" onclick="exportPDF()">📄 PDF Report</button>
                     <button class="btn btn-sec" style="color:var(--error); border-color:var(--error)" onclick="location.reload()">Reset</button>
                 </div>
             </div>
 
-            <div class="col-right">
+            <div class="data-area">
                 <div class="search-wrap">
-                    <input type="text" id="search" class="search-box" placeholder="Filter tags...">
+                    <input type="text" id="search" class="search-inp" placeholder="Search tags...">
                 </div>
-                <div class="table-wrap">
-                    <table id="table"></table>
+                <div class="table-scroll">
+                    <table id="metaTable"></table>
                 </div>
             </div>
         </div>
@@ -175,26 +188,26 @@
 
     <script>
         // CONFIG
-        const LIB_URLS = [
+        const LIBS = [
             "https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js",
             "https://unpkg.com/exifreader@4.33.1/dist/exif-reader.min.js"
         ];
 
-        let state = { tags: {}, file: null, gps: null, address: null };
+        let state = { tags: {}, gps: null, address: null, file: null };
         const el = (id) => document.getElementById(id);
 
         // 1. INIT
         async function init() {
             if(window.ExifReader) { ready(); return; }
-            for(let u of LIB_URLS) {
+            for(let u of LIBS) {
                 el('status').innerText = "Connecting...";
                 try { await load(u); if(window.ExifReader){ ready(); return; } } catch(e){}
             }
             // Fail
-            el('dot').style.background = 'var(--error)';
+            el('dot').className = "dot err";
             el('status').innerText = "Blocked";
-            el('view-upload').style.display = 'none';
-            el('view-manual').style.display = 'block';
+            el('viewUpload').style.display = 'none';
+            el('viewManual').style.display = 'block';
             setupManual();
         }
 
@@ -206,20 +219,20 @@
         }
 
         function ready() {
-            el('dot').style.background = 'var(--success)';
+            el('dot').className = "dot ok";
             el('status').innerText = "Ready";
-            el('view-manual').style.display = 'none';
-            el('view-upload').style.display = 'block';
+            el('viewManual').style.display = 'none';
+            el('viewUpload').style.display = 'flex';
             
-            el('drop-zone').onclick = () => el('file-in').click();
-            el('file-in').onchange = e => process(e.target.files[0]);
-            el('drop-zone').ondragover = e => { e.preventDefault(); el('drop-zone').style.borderColor = 'var(--accent)'; };
-            el('drop-zone').ondragleave = () => el('drop-zone').style.borderColor = 'var(--border)';
-            el('drop-zone').ondrop = e => { e.preventDefault(); process(e.dataTransfer.files[0]); };
+            el('dropZone').onclick = () => el('fileInput').click();
+            el('fileInput').onchange = e => process(e.target.files[0]);
+            el('dropZone').ondragover = e => { e.preventDefault(); el('dropZone').style.borderColor = 'var(--brand)'; };
+            el('dropZone').ondragleave = () => el('dropZone').style.borderColor = 'var(--border)';
+            el('dropZone').ondrop = e => { e.preventDefault(); process(e.dataTransfer.files[0]); };
         }
 
         function setupManual() {
-            const z = el('manual-drop');
+            const z = el('manualDrop');
             z.ondragover = e => e.preventDefault();
             z.ondrop = e => {
                 e.preventDefault();
@@ -236,99 +249,99 @@
         // 2. PROCESS
         async function process(file) {
             if(!file) return;
-            state = { tags: {}, file: file, gps: null, address: null };
+            state = { tags: {}, gps: null, address: null, file: file };
 
-            el('view-upload').style.display = 'none';
-            el('view-dash').style.display = 'flex';
-            el('fname').innerText = file.name;
-            el('fsize').innerText = (file.size/1024).toFixed(2) + " KB";
-            el('table').innerHTML = '<tr><td colspan="2">Scanning...</td></tr>';
-            el('gps-card').style.display = 'none';
-            el('no-gps-msg').style.display = 'none';
+            el('viewUpload').style.display = 'none';
+            el('viewDash').style.display = 'flex';
+            el('fName').innerText = file.name;
+            el('fSize').innerText = (file.size/1024).toFixed(2) + " KB";
+            el('metaTable').innerHTML = '<tr><td colspan="2">Deep Scanning...</td></tr>';
+            el('locPanel').style.display = 'none';
+            el('noGpsPanel').style.display = 'none';
 
             try {
-                // FORCE EXPANDED FOR DEEP SCAN
+                // ENGINE
                 const tags = await ExifReader.load(file, { expanded: true });
                 state.tags = tags;
                 
                 renderTable(tags);
                 renderThumb(tags, file);
                 
-                // NEW: Calculate GPS
-                const coords = extractGPS(tags);
+                // DEEP GPS SEARCH
+                const coords = deepSearchGPS(tags);
                 if(coords) {
                     state.gps = coords;
                     showGPS(coords);
-                    fetchAddress(coords);
+                    fetchAddr(coords);
                 } else {
-                    el('no-gps-msg').style.display = 'block';
+                    el('noGpsPanel').style.display = 'block';
                 }
 
             } catch(e) {
-                el('table').innerHTML = `<tr><td style="color:red">Error: ${e.message}</td></tr>`;
+                el('metaTable').innerHTML = `<tr><td style="color:red">Error: ${e.message}</td></tr>`;
             }
         }
 
-        // 3. MILITARY GRADE GPS PARSER
-        function extractGPS(tags) {
-            // Need both groups (EXIF or GPS)
-            // ExifReader "expanded" puts GPS usually in 'gps' group or 'exif' group.
-            
+        // 3. DEEP GPS ENGINE (The Fix for your Error)
+        function deepSearchGPS(tags) {
             let lat = null, lon = null;
 
-            // Helper to convert Rational [num, den] to decimal
-            const parseRat = (val) => {
-                if(Array.isArray(val) && val.length === 2) return val[0] / val[1];
+            // Helper to clean mixed string/number values
+            const clean = (val) => {
+                if(Array.isArray(val)) return val[0]; // Take first if array
+                if(typeof val === 'object' && val.description) return val.description;
+                if(typeof val === 'object' && val.value) return val.value;
                 return val;
             };
 
-            // Helper to convert DMS Array to DD
-            const dmsToDd = (dms, ref) => {
-                // dms is usually [[deg,1], [min,1], [sec,1]]
-                if(!Array.isArray(dms)) return null;
-                const d = parseRat(dms[0]);
-                const m = parseRat(dms[1]);
-                const s = parseRat(dms[2]);
-                let dd = d + (m/60) + (s/3600);
-                if(ref === 'S' || ref === 'W') dd = dd * -1;
-                return dd;
+            // Helper to check if a value looks like a coordinate
+            const isCoord = (v) => {
+                if(!v) return false;
+                const s = String(v).replace(/[^\d.-]/g, ''); // strip non-numeric
+                const n = parseFloat(s);
+                // Valid lat is -90 to 90
+                return !isNaN(n) && n !== 0 && Math.abs(n) <= 180;
             };
 
-            // TRY 1: 'gps' Group (Most common for ExifReader)
-            if(tags.gps) {
-                if(tags.gps.Latitude && tags.gps.Longitude) {
-                    // Check if it's raw DMS array
-                    if(Array.isArray(tags.gps.Latitude) && tags.gps.LatitudeRef) {
-                        lat = dmsToDd(tags.gps.Latitude, tags.gps.LatitudeRef);
-                        lon = dmsToDd(tags.gps.Longitude, tags.gps.LongitudeRef);
-                    } 
-                    // Or pre-calculated description (sometimes happens)
-                    else if (tags.gps.Latitude.description) {
-                         // Fallback to simpler parse if text is "40.23"
-                         lat = parseFloat(tags.gps.Latitude.description);
-                         lon = parseFloat(tags.gps.Longitude.description);
+            const parseVal = (v) => parseFloat(String(v).replace(/[^\d.-]/g, ''));
+
+            // 1. Scan EVERY Group and EVERY Key for "Latitude" / "Longitude"
+            // This bypasses specific paths like tags.gps.Latitude
+            for(const group in tags) {
+                for(const key in tags[group]) {
+                    const keyLower = key.toLowerCase();
+                    const val = clean(tags[group][key]);
+
+                    if(!val) continue;
+
+                    // Match Latitude
+                    if(keyLower.includes('latitude') && !keyLower.includes('ref')) {
+                        if(isCoord(val)) lat = parseVal(val);
+                    }
+                    // Match Longitude
+                    if(keyLower.includes('longitude') && !keyLower.includes('ref')) {
+                        if(isCoord(val)) lon = parseVal(val);
                     }
                 }
             }
 
-            // Valid Check
-            if(lat && lon && !isNaN(lat) && !isNaN(lon)) return { lat, lon };
+            // If we found them via brute force scan
+            if(lat && lon) return { lat, lon };
+
             return null;
         }
 
         function showGPS(c) {
-            el('gps-card').style.display = 'block';
-            // Start with coords while loading address
-            el('gps-data').innerHTML = `
-                <div class="gps-row"><span>Lat:</span> <strong>${c.lat.toFixed(5)}</strong></div>
-                <div class="gps-row"><span>Lon:</span> <strong>${c.lon.toFixed(5)}</strong></div>
-                <div style="text-align:center; padding-top:5px; font-style:italic">Fetching City...</div>
+            el('locPanel').style.display = 'block';
+            el('addrData').innerHTML = `
+                <div class="addr-row"><span>Lat:</span> <strong>${c.lat.toFixed(6)}</strong></div>
+                <div class="addr-row"><span>Lon:</span> <strong>${c.lon.toFixed(6)}</strong></div>
+                <div style="text-align:center; margin-top:5px; font-style:italic"><div class="spinner"></div> Resolving Address...</div>
             `;
         }
 
-        async function fetchAddress(c) {
+        async function fetchAddr(c) {
             try {
-                // HTTPS IS MANDATORY
                 const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${c.lat}&lon=${c.lon}`);
                 const d = await r.json();
                 
@@ -341,36 +354,35 @@
                         Full: d.display_name
                     };
 
-                    let html = '';
-                    if(state.address.Country) html += row('Country', state.address.Country);
-                    if(state.address.City) html += row('City/Town', state.address.City);
-                    if(state.address.Street) html += row('Street', state.address.Street);
+                    let h = '';
+                    if(a.country) h += `<div class="addr-row"><span class="addr-key">Country:</span> <span>${a.country}</span></div>`;
+                    if(a.state) h += `<div class="addr-row"><span class="addr-key">State:</span> <span>${a.state}</span></div>`;
+                    if(state.address.City) h += `<div class="addr-row"><span class="addr-key">City:</span> <span>${state.address.City}</span></div>`;
+                    if(a.road) h += `<div class="addr-row"><span class="addr-key">Street:</span> <span>${a.road}</span></div>`;
                     
-                    el('gps-data').innerHTML = html;
+                    el('addrData').innerHTML = h;
                 } else {
-                    el('gps-data').innerHTML += `<div style="color:orange">Address Not Found</div>`;
+                    el('addrData').innerHTML += `<div style="color:orange; text-align:center">Address not found</div>`;
                 }
             } catch(e) {
-                el('gps-data').innerHTML += `<div style="color:red">Map Offline</div>`;
+                el('addrData').innerHTML += `<div style="color:red; text-align:center">Map Service Offline</div>`;
             }
         }
-
-        function row(k, v) { return `<div class="gps-row"><span class="gps-key">${k}:</span> <span class="gps-val">${v}</span></div>`; }
 
         function openMap() {
             if(state.gps) window.open(`https://www.google.com/maps?q=${state.gps.lat},${state.gps.lon}`, '_blank');
         }
 
-        // 4. UI RENDER
+        // 4. RENDER
         function renderTable(tags) {
-            const t = el('table'); t.innerHTML = '';
+            const t = el('metaTable'); t.innerHTML = '';
             const gs = Object.keys(tags).sort();
             if(!gs.length) { t.innerHTML = '<tr><td>No Tags</td></tr>'; return; }
 
             gs.forEach(g => {
                 if(g === 'thumbnail') return;
                 const h = document.createElement('tr');
-                h.innerHTML = `<td colspan="2" class="grp">${g}</td>`;
+                h.innerHTML = `<td colspan="2" class="grp-hdr">${g}</td>`;
                 t.appendChild(h);
 
                 for(let k in tags[g]) {
@@ -412,57 +424,57 @@
             return r;
         }
 
-        function dl(type) {
-            let c = "", n = "meta", m = "";
-            const d = getFlat();
-            
-            if(type === 'json') {
-                c = JSON.stringify({ tags: state.tags, gps: state.gps, addr: state.address }, null, 2);
-                n += ".json"; m = "application/json";
-            } else if (type === 'csv') {
-                c = "Group,Tag,Value\n" + d.map(r => `"${r[0]}","${r[1]}","${r[2].replace(/"/g,'""')}"`).join('\n');
-                n += ".csv"; m = "text/csv";
-            } else if (type === 'txt') {
-                c = `METALYZER REPORT\nFile: ${state.file.name}\n\n`;
-                if(state.address) c+= `LOCATION: ${state.address.Full}\n\n`;
-                d.forEach(r => c += `[${r[0]}] ${r[1]}: ${r[2]}\n`);
-                n += ".txt"; m = "text/plain";
-            } else if (type === 'pdf') {
-                if(!window.jspdf) { alert("PDF Lib Missing"); return; }
-                const doc = new window.jspdf.jsPDF();
-                doc.setTextColor(37, 99, 235); doc.setFontSize(18); doc.text("MetaLyzer Report", 14, 20);
-                doc.setTextColor(60); doc.setFontSize(10); doc.text(`File: ${state.file.name}`, 14, 28);
-                doc.text("Made By Aryan Giri", 14, 34);
-                if(state.address) {
-                    const addr = doc.splitTextToSize("Loc: " + state.address.Full, 180);
-                    doc.text(addr, 14, 40);
-                }
-                doc.autoTable({
-                    startY: 50, head: [['Group','Tag','Value']], body: d,
-                    theme: 'grid', headStyles: {fillColor:[37,99,235]}, columnStyles:{0:{cellWidth:30},1:{cellWidth:40}}
-                });
-                doc.save('report.pdf');
-                return;
+        function exportJSON() {
+            const d = { ...state.tags, EnrichedLocation: state.address, GPS: state.gps };
+            save(JSON.stringify(d, null, 2), 'meta.json', 'application/json');
+        }
+        function exportCSV() {
+            let c = "Group,Tag,Value\n";
+            getFlat().forEach(r => c += `"${r[0]}","${r[1]}","${r[2].replace(/"/g, '""')}"\n`);
+            save(c, 'meta.csv', 'text/csv');
+        }
+        function exportTXT() {
+            let t = `METALYZER REPORT - ${state.file.name}\n\n`;
+            if(state.address) t+= `LOCATION: ${state.address.Full}\n\n`;
+            getFlat().forEach(r => t+= `[${r[0]}] ${r[1]}: ${r[2]}\n`);
+            save(t, 'meta.txt', 'text/plain');
+        }
+        function exportPDF() {
+            if(!window.jspdf) { alert("PDF Lib Missing"); return; }
+            const doc = new window.jspdf.jsPDF();
+            doc.setTextColor(37,99,235); doc.setFontSize(18); doc.text("MetaLyzer Report", 14, 20);
+            doc.setTextColor(60); doc.setFontSize(10); doc.text(`File: ${state.file.name}`, 14, 28);
+            doc.text("Made By Aryan Giri", 14, 34);
+            if(state.address) {
+                const a = doc.splitTextToSize("Loc: " + state.address.Full, 180);
+                doc.text(a, 14, 40);
             }
-
+            doc.autoTable({
+                startY: 50, head:[['Group','Tag','Value']], body: getFlat(),
+                theme:'grid', headStyles:{fillColor:[37,99,235]}, columnStyles:{0:{cellWidth:30},1:{cellWidth:40}}
+            });
+            doc.save('report.pdf');
+        }
+        function save(c, n, t) {
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([c], {type:m}));
+            a.href = URL.createObjectURL(new Blob([c],{type:t}));
             a.download = n; a.click();
         }
 
         // THEME
-        function toggleTheme() {
+        const tBtn = el('themeToggle');
+        if(localStorage.getItem('theme')==='dark') document.body.setAttribute('data-theme','dark');
+        tBtn.onclick = () => {
             const d = document.body.getAttribute('data-theme') === 'dark';
-            document.body.setAttribute('data-theme', d ? 'light' : 'dark');
-            localStorage.setItem('theme', d ? 'light' : 'dark');
-        }
-        if(localStorage.getItem('theme')==='dark') toggleTheme();
+            document.body.setAttribute('data-theme', d ? 'light':'dark');
+            localStorage.setItem('theme', d ? 'light':'dark');
+        };
 
         // SEARCH
         el('search').onkeyup = e => {
             const v = e.target.value.toLowerCase();
-            document.querySelectorAll('#table tr').forEach(r => {
-                if(!r.classList.contains('grp')) r.style.display = r.innerText.toLowerCase().includes(v) ? '' : 'none';
+            document.querySelectorAll('#metaTable tr').forEach(r => {
+                if(!r.classList.contains('grp-hdr')) r.style.display = r.innerText.toLowerCase().includes(v) ? '' : 'none';
             });
         };
 
