@@ -3,23 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MetaLyzer Ultimate - Deep Metadata Forensics</title>
+    <title>MetaLyzer Ultimate - Resilient Edition</title>
     
-    <script src="https://unpkg.com/exifreader@4.23.0/dist/exif-reader.min.js"></script>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
-
     <style>
         :root {
             --bg-color: #f3f4f6;
             --card-bg: #ffffff;
             --text-main: #111827;
-            --text-muted: #6b7280;
             --accent: #2563eb;
             --border: #e5e7eb;
-            --code-bg: #f9fafb;
             --status-ok: #10b981;
+            --status-warn: #f59e0b;
             --status-err: #ef4444;
         }
 
@@ -27,96 +21,80 @@
             --bg-color: #0f172a;
             --card-bg: #1e293b;
             --text-main: #f3f4f6;
-            --text-muted: #94a3b8;
             --accent: #3b82f6;
             --border: #334155;
-            --code-bg: #0f172a;
         }
 
-        body { font-family: 'Inter', system-ui, sans-serif; margin: 0; background: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
+        body { font-family: sans-serif; margin: 0; background: var(--bg-color); color: var(--text-main); display: flex; flex-direction: column; min-height: 100vh; }
         
         /* HEADER */
         header { background: var(--card-bg); padding: 1rem 2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .brand { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
-        .controls { display: flex; gap: 15px; align-items: center; }
         
-        /* LIBRARY STATUS INDICATOR */
-        .lib-status { font-size: 0.8rem; font-weight: bold; padding: 4px 10px; border-radius: 99px; background: #eee; color: #666; }
-        .lib-status.ok { background: #d1fae5; color: #065f46; }
-        .lib-status.err { background: #fee2e2; color: #991b1b; }
+        /* LOADER STATUS */
+        .loader-log { font-size: 0.75rem; font-family: monospace; color: var(--text-main); opacity: 0.7; text-align: right; }
+        .status-dot { height: 10px; width: 10px; background: #ccc; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        .status-dot.ok { background: var(--status-ok); box-shadow: 0 0 5px var(--status-ok); }
+        .status-dot.err { background: var(--status-err); }
 
-        .theme-btn { background: none; border: 1px solid var(--border); color: var(--text-main); padding: 5px 15px; border-radius: 20px; cursor: pointer; }
-
-        /* MAIN LAYOUT */
+        /* MAIN */
         main { max-width: 1200px; margin: 2rem auto; width: 100%; padding: 0 1rem; flex: 1; }
-
-        /* DROP ZONE */
-        .drop-zone { background: var(--card-bg); border: 2px dashed var(--border); border-radius: 1rem; padding: 4rem 2rem; text-align: center; cursor: pointer; }
+        .drop-zone { background: var(--card-bg); border: 2px dashed var(--border); border-radius: 1rem; padding: 4rem 2rem; text-align: center; cursor: pointer; transition: 0.2s; }
         .drop-zone:hover { border-color: var(--accent); background: rgba(37, 99, 235, 0.04); }
-        
+
         /* DASHBOARD */
-        .dashboard { display: none; gap: 1.5rem; flex-wrap: wrap; }
-        .sidebar { flex: 1; min-width: 300px; }
+        .dashboard { display: none; gap: 1.5rem; flex-wrap: wrap; margin-top: 20px; }
+        .sidebar { flex: 1; min-width: 250px; }
         .data-panel { flex: 3; min-width: 300px; background: var(--card-bg); border-radius: 1rem; border: 1px solid var(--border); overflow: hidden; }
 
-        .thumbnail-box { width: 100%; min-height: 200px; background: var(--code-bg); display: flex; align-items: center; justify-content: center; border-radius: 0.5rem; margin-bottom: 1rem; border: 1px solid var(--border); }
-        .thumbnail-box img { max-width: 100%; height: auto; max-height: 300px; }
+        .thumbnail-box { width: 100%; min-height: 200px; background: rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; border-radius: 0.5rem; margin-bottom: 1rem; border: 1px solid var(--border); overflow: hidden; }
+        .thumbnail-box img { max-width: 100%; max-height: 300px; }
 
-        .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem; }
-        .btn { padding: 0.6rem; border-radius: 0.5rem; cursor: pointer; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-main); }
-        .btn:hover { border-color: var(--accent); background: var(--code-bg); }
+        .btn { padding: 0.6rem; border-radius: 0.5rem; cursor: pointer; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-main); width: 100%; margin-bottom: 5px; }
+        .btn:hover { border-color: var(--accent); }
 
         /* TABLE */
-        .panel-header { padding: 1rem; border-bottom: 1px solid var(--border); background: var(--code-bg); display: flex; justify-content: space-between; align-items: center; }
         table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-        th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); word-break: break-word; }
+        th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); word-break: break-all; }
         th { width: 30%; color: var(--accent); font-family: monospace; }
-        td { font-family: monospace; }
-        .group-header th { background: #e0e7ff; color: #3730a3; text-transform: uppercase; font-size: 0.75rem; text-align: center; }
+        .group-header th { background: rgba(37, 99, 235, 0.1); color: var(--accent); text-align: center; font-size: 0.8rem; text-transform: uppercase; }
 
-        footer { text-align: center; padding: 2rem; border-top: 1px solid var(--border); margin-top: auto; opacity: 0.7; }
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999; }
+        .log-line { margin: 2px 0; font-family: monospace; }
     </style>
 </head>
 <body>
 
+    <div id="loadingOverlay">
+        <h2>Initializing MetaLyzer...</h2>
+        <div id="loadLogs"></div>
+        <button id="forceStartBtn" style="display:none; margin-top: 20px; padding: 10px 20px; cursor: pointer;">Force Start (Libraries might be missing)</button>
+    </div>
+
     <header>
-        <div class="brand">MetaLyzer <span>ULTIMATE</span></div>
-        <div class="controls">
-            <div id="libStatus" class="lib-status">Checking Libraries...</div>
-            <button id="themeToggle" class="theme-btn">🌙</button>
+        <div class="brand">MetaLyzer <span>RESILIENT</span></div>
+        <div class="loader-log">
+            <span id="systemStatus" class="status-dot"></span> <span id="systemText">System Check...</span>
         </div>
     </header>
 
     <main>
         <div class="drop-zone" id="dropZone">
-            <h2>Drop file to Unlock Data</h2>
-            <p style="opacity: 0.6">Images (JPG/PNG/TIFF), Videos, PDFs</p>
-            <button class="btn" style="background: var(--accent); color: white; border: none; margin-top: 10px;">Select File</button>
+            <h2>Drop file here</h2>
+            <p>Bypassing network blocks & scanning metadata</p>
             <input type="file" id="fileInput" style="display: none;">
         </div>
 
-        <div id="errorBox" style="display:none; color: white; background: #ef4444; padding: 1rem; border-radius: 8px; margin-bottom: 20px; text-align: center;"></div>
-
         <div class="dashboard" id="dashboard">
             <div class="sidebar">
-                <div style="background: var(--card-bg); padding: 1.5rem; border-radius: 1rem; border: 1px solid var(--border);">
+                <div style="background: var(--card-bg); padding: 1rem; border-radius: 1rem; border: 1px solid var(--border);">
                     <div class="thumbnail-box" id="thumbBox">No Preview</div>
-                    <div><strong>Name:</strong> <span id="fileName">-</span></div>
-                    <div><strong>Size:</strong> <span id="fileSize">-</span></div>
-                    <div class="actions">
-                        <button class="btn" onclick="downloadJSON()">{} JSON</button>
-                        <button class="btn" onclick="downloadCSV()">📊 CSV</button>
-                        <button class="btn" onclick="downloadTXT()">📝 TXT</button>
-                        <button class="btn" onclick="downloadPDF()">📄 PDF</button>
-                    </div>
+                    <div style="margin-bottom: 10px;"><strong>File:</strong> <span id="fileName">-</span></div>
+                    <button class="btn" onclick="downloadTXT()">Download Report</button>
+                    <button class="btn" onclick="location.reload()">Reset Tool</button>
                 </div>
             </div>
-
             <div class="data-panel">
-                <div class="panel-header">
-                    <strong>Metadata Inspector</strong>
-                    <input type="text" id="search" placeholder="Filter..." style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
-                </div>
                 <div style="overflow-x: auto;">
                     <table id="metaTable"></table>
                 </div>
@@ -124,32 +102,105 @@
         </div>
     </main>
 
-    <footer>Made By Aryan Giri</footer>
-
     <script>
-        // --- 1. SYSTEM CHECK ---
-        window.addEventListener('load', () => {
-            const status = document.getElementById('libStatus');
-            if (typeof window.ExifReader !== 'undefined') {
-                status.innerText = "✓ System Ready";
-                status.classList.add('ok');
-            } else {
-                status.innerText = "⚠ Library Error";
-                status.classList.add('err');
-                showError("Could not load ExifReader library. Please check your internet connection or disable ad-blockers.");
+        // --- 1. RESILIENT LOADER SYSTEM ---
+        const logArea = document.getElementById('loadLogs');
+        
+        function log(msg, color='#fff') {
+            const div = document.createElement('div');
+            div.className = 'log-line';
+            div.style.color = color;
+            div.innerText = "> " + msg;
+            logArea.appendChild(div);
+        }
+
+        // List of redundant CDNs for every library
+        const libraries = [
+            {
+                name: "ExifReader",
+                check: () => typeof window.ExifReader !== 'undefined',
+                sources: [
+                    "https://cdn.jsdelivr.net/npm/exifreader@4.23.0/dist/exif-reader.min.js",
+                    "https://unpkg.com/exifreader@4.23.0/dist/exif-reader.min.js",
+                    "https://cdnjs.cloudflare.com/ajax/libs/exifreader/4.12.0/exif-reader.min.js" // Older fallback
+                ]
+            },
+            {
+                name: "jsPDF",
+                check: () => typeof window.jspdf !== 'undefined',
+                sources: [
+                    "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",
+                    "https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"
+                ]
+            },
+            {
+                name: "AutoTable",
+                check: () => typeof window.jspdf !== 'undefined' && typeof window.jspdf.plugin !== 'undefined', // Loose check
+                sources: [
+                    "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js",
+                    "https://unpkg.com/jspdf-autotable@3.5.29/dist/jspdf.plugin.autotable.min.js"
+                ]
             }
-        });
+        ];
 
-        // --- 2. THEME ---
-        const themeBtn = document.getElementById('themeToggle');
-        if(localStorage.getItem('theme')==='dark') document.body.setAttribute('data-theme', 'dark');
-        themeBtn.onclick = () => {
-            const isDark = document.body.getAttribute('data-theme') === 'dark';
-            document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
-            localStorage.setItem('theme', isDark ? 'light' : 'dark');
-        };
+        async function loadScript(url) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
 
-        // --- 3. FILE HANDLING ---
+        async function initSystem() {
+            log("Starting Network Bypass Sequence...");
+            
+            for (const lib of libraries) {
+                let loaded = false;
+                for (const source of lib.sources) {
+                    if (lib.check()) { loaded = true; break; } // Already loaded
+                    
+                    try {
+                        log(`Attempting to load ${lib.name} from source...`, '#ccc');
+                        await loadScript(source);
+                        if(lib.check()) {
+                            log(`✓ Success: ${lib.name} loaded.`, '#4ade80');
+                            loaded = true;
+                            break; 
+                        }
+                    } catch (e) {
+                        log(`x Blocked: ${source}`, '#f87171');
+                    }
+                }
+                
+                if (!loaded) {
+                    log(`CRITICAL: Failed to load ${lib.name} from all mirrors.`, 'red');
+                }
+            }
+
+            // Final Check
+            if (typeof window.ExifReader !== 'undefined') {
+                setTimeout(() => {
+                    document.getElementById('loadingOverlay').style.display = 'none';
+                    document.getElementById('systemStatus').classList.add('ok');
+                    document.getElementById('systemText').innerText = "System Ready";
+                }, 1000);
+            } else {
+                log("FATAL ERROR: Core engine missing. Check internet.", 'red');
+                document.getElementById('forceStartBtn').style.display = 'block';
+            }
+        }
+
+        // Start Loading immediately
+        initSystem();
+
+        document.getElementById('forceStartBtn').onclick = () => {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+
+        // --- 2. TOOL LOGIC ---
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
         let currentFile = null;
@@ -164,66 +215,55 @@
         async function handleFile(file) {
             if(!file) return;
             currentFile = file;
-            
-            // UI Reset
-            document.getElementById('errorBox').style.display = 'none';
+
+            // UI Setup
             document.getElementById('dashboard').style.display = 'flex';
             dropZone.style.display = 'none';
             document.getElementById('fileName').innerText = file.name;
-            document.getElementById('fileSize').innerText = (file.size / 1024).toFixed(2) + ' KB';
-            document.getElementById('metaTable').innerHTML = '<tr><td colspan="2">Scanning...</td></tr>';
-            
-            try {
-                if (typeof ExifReader === 'undefined') throw new Error("ExifReader library not loaded.");
+            const table = document.getElementById('metaTable');
+            table.innerHTML = '<tr><td colspan="2">Analyzing...</td></tr>';
 
-                // THE MAGIC LINE: expanded: true gives us the deep data
+            try {
+                // Check if engine exists
+                if (typeof window.ExifReader === 'undefined') {
+                    throw new Error("ExifReader engine is missing. Reload page.");
+                }
+
                 const tags = await ExifReader.load(file, { expanded: true });
                 allTags = tags;
-                
                 renderTable(tags);
-                renderThumbnail(tags);
+                renderThumb(tags);
 
             } catch (err) {
                 console.error(err);
-                showError(err.message);
-                document.getElementById('metaTable').innerHTML = '<tr><td colspan="2">Scan Failed.</td></tr>';
+                table.innerHTML = `<tr><td colspan="2" style="color:red">Error: ${err.message}</td></tr>`;
             }
         }
 
-        function showError(msg) {
-            const box = document.getElementById('errorBox');
-            box.style.display = 'block';
-            box.innerText = "Error: " + msg;
-        }
-
-        // --- 4. RENDERERS ---
         function renderTable(tags) {
             const table = document.getElementById('metaTable');
             table.innerHTML = '';
             
-            // Prioritize specific groups
             const groups = Object.keys(tags).sort();
-            
             if(groups.length === 0) {
-                table.innerHTML = '<tr><td colspan="2">No metadata found in this file.</td></tr>';
-                return;
+                table.innerHTML = '<tr><td colspan="2">No Metadata Found</td></tr>'; return;
             }
 
             groups.forEach(group => {
-                if(group === 'thumbnail') return; // Handled separately
+                if(group === 'thumbnail') return;
                 
-                // Group Header
-                const hRow = document.createElement('tr');
-                hRow.className = 'group-header';
-                hRow.innerHTML = `<th colspan="2">${group}</th>`;
-                table.appendChild(hRow);
+                const h = document.createElement('tr');
+                h.className = 'group-header';
+                h.innerHTML = `<th colspan="2">${group}</th>`;
+                table.appendChild(h);
 
-                // Group Rows
                 for(let key in tags[group]) {
                     let val = tags[group][key].description || tags[group][key].value;
                     if(Array.isArray(val)) val = val.join(', ');
-                    if(typeof val === 'object') val = JSON.stringify(val); // Safety for nested objects
                     
+                    // Simple clean up
+                    val = String(val).substring(0, 300); 
+
                     const row = document.createElement('tr');
                     row.innerHTML = `<th>${key}</th><td>${val}</td>`;
                     table.appendChild(row);
@@ -231,13 +271,12 @@
             });
         }
 
-        function renderThumbnail(tags) {
+        function renderThumb(tags) {
             const box = document.getElementById('thumbBox');
             box.innerHTML = '';
-            
             if(tags.thumbnail) {
                 const img = document.createElement('img');
-                img.src = tags.thumbnail; // ExifReader returns base64 url
+                img.src = tags.thumbnail;
                 box.appendChild(img);
             } else if (currentFile.type.startsWith('image/')) {
                 const img = document.createElement('img');
@@ -248,78 +287,23 @@
             }
         }
 
-        // --- 5. SEARCH ---
-        document.getElementById('search').addEventListener('keyup', (e) => {
-            const term = e.target.value.toLowerCase();
-            const rows = document.querySelectorAll('#metaTable tr:not(.group-header)');
-            rows.forEach(row => {
-                row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
-            });
-        });
-
-        // --- 6. EXPORTS ---
-        function downloadJSON() {
-            save(JSON.stringify(allTags, null, 2), 'metadata.json', 'text/json');
-        }
-        
-        function downloadCSV() {
-            let csv = "Group,Tag,Value\n";
-            for(let g in allTags) {
-                if(g === 'thumbnail') continue;
-                for(let k in allTags[g]) {
-                    let v = allTags[g][k].description || allTags[g][k].value;
-                    csv += `"${g}","${k}","${String(v).replace(/"/g, '""')}"\n`;
-                }
-            }
-            save(csv, 'metadata.csv', 'text/csv');
-        }
-
         function downloadTXT() {
-            let txt = `REPORT: ${currentFile.name}\n\n`;
+            if(!currentFile) return;
+            let txt = `METADATA REPORT: ${currentFile.name}\n\n`;
             for(let g in allTags) {
-                if(g === 'thumbnail') continue;
-                txt += `[${g.toUpperCase()}]\n`;
+                if(g==='thumbnail') continue;
+                txt += `[${g}]\n`;
                 for(let k in allTags[g]) {
                     let v = allTags[g][k].description || allTags[g][k].value;
-                    txt += `  ${k}: ${v}\n`;
+                    txt += `${k}: ${v}\n`;
                 }
-                txt += "\n";
+                txt += '\n';
             }
-            save(txt, 'metadata.txt', 'text/plain');
-        }
-
-        function downloadPDF() {
-             const { jsPDF } = window.jspdf;
-             const doc = new jsPDF();
-             
-             let bodyData = [];
-             for(let g in allTags) {
-                if(g==='thumbnail') continue;
-                for(let k in allTags[g]) {
-                    let v = String(allTags[g][k].description || allTags[g][k].value);
-                    bodyData.push([g, k, v.substring(0, 60)]);
-                }
-             }
-
-             doc.text("MetaLyzer Report", 14, 20);
-             doc.setFontSize(10);
-             doc.text(`File: ${currentFile.name}`, 14, 28);
-             
-             doc.autoTable({
-                 startY: 35,
-                 head: [['Group', 'Tag', 'Value']],
-                 body: bodyData,
-                 theme: 'grid'
-             });
-             
-             doc.save('metadata.pdf');
-        }
-
-        function save(content, name, type) {
-            const blob = new Blob([content], {type: type});
-            const url = URL.createObjectURL(blob);
+            const blob = new Blob([txt], {type: 'text/plain'});
             const a = document.createElement('a');
-            a.href = url; a.download = name; a.click();
+            a.href = URL.createObjectURL(blob);
+            a.download = 'report.txt';
+            a.click();
         }
     </script>
 </body>
