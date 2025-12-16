@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MetaLyzer v10 - Deep Search GPS</title>
+    <title>MetaLyzer - Professional Forensics</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.4/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/5.0.2/jspdf.plugin.autotable.min.js"></script>
@@ -18,6 +18,7 @@
             --border: #e2e8f0;
             --success: #16a34a;
             --error: #dc2626;
+            --warn: #ca8a04;
         }
 
         [data-theme="dark"] {
@@ -35,14 +36,12 @@
         /* HEADER */
         header { padding: 1rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .logo { font-size: 1.4rem; font-weight: 800; color: var(--brand); display: flex; gap: 8px; align-items: center; }
-        
+        .controls { display: flex; gap: 10px; align-items: center; }
         .badge { font-size: 0.75rem; background: var(--bg); border: 1px solid var(--border); padding: 4px 10px; border-radius: 99px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
         .dot { width: 8px; height: 8px; border-radius: 50%; background: #999; }
         .dot.ok { background: var(--success); box-shadow: 0 0 5px var(--success); }
         .dot.err { background: var(--error); }
-
-        .theme-btn { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-left: 10px; }
-        .theme-btn:hover { background: var(--bg); }
+        .theme-btn { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
 
         /* MAIN */
         main { flex: 1; padding: 20px; overflow: hidden; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 1600px; margin: 0 auto; }
@@ -66,7 +65,6 @@
         .sidebar { width: 340px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; flex-shrink: 0; padding-bottom: 20px; }
         .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         
-        /* PREVIEW */
         .thumb { width: 100%; height: 200px; background: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 10px; }
         .thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
@@ -97,7 +95,6 @@
 
         footer { margin-top: auto; padding: 15px; text-align: center; color: var(--muted); font-size: 0.8rem; background: var(--surface); border-top: 1px solid var(--border); width: 100%; }
         
-        /* Loading Spinner */
         .spinner { border: 3px solid rgba(0,0,0,0.1); border-left-color: var(--brand); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display:inline-block; vertical-align:middle; margin-right:5px;}
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -107,7 +104,7 @@
 <body>
 
     <header>
-        <div class="logo"><span>🌍</span> MetaLyzer v10</div>
+        <div class="logo"><span>👁️</span> MetaLyzer</div>
         <div class="controls">
             <div class="badge"><div id="dot" class="dot"></div> <span id="status">Init...</span></div>
             <button id="themeToggle" class="theme-btn">🌓 Theme</button>
@@ -127,13 +124,13 @@
         <div id="viewManual">
             <div class="err-card">
                 <h2 style="color:var(--error)">⚠️ Network Blocked</h2>
-                <p>Auto-loading failed. Load library manually:</p>
+                <p>Auto-loading failed. Load manually:</p>
                 <div style="background:var(--bg); padding:15px; border-radius:8px; margin:20px 0; text-align:left;">
-                    1. <a href="https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js" target="_blank" class="link">Download Library File</a><br>
-                    2. Drag it into the box below.
+                    1. <a href="https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js" target="_blank" class="link">Download Library</a><br>
+                    2. Drag it here:
                 </div>
                 <div id="manualDrop" style="border:2px dashed #777; padding:20px; border-radius:8px; cursor:pointer;">
-                    ⬇️ Drop <b>exif-reader.min.js</b> Here
+                    ⬇️ Drop <b>exif-reader.min.js</b>
                 </div>
             </div>
         </div>
@@ -161,7 +158,7 @@
 
                 <div class="panel" id="noGpsPanel" style="display:none; border-left:4px solid #f59e0b;">
                     <div style="color:#f59e0b; font-weight:bold; margin-bottom:5px;">⚠️ No GPS Data</div>
-                    <div style="font-size:0.85rem;">Deep search found no coordinates in this file.</div>
+                    <div style="font-size:0.85rem;">Deep search found no coordinates.</div>
                 </div>
 
                 <div class="panel">
@@ -187,7 +184,7 @@
     <footer>Made By Aryan Giri</footer>
 
     <script>
-        // CONFIG
+        // --- CONFIG ---
         const LIBS = [
             "https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js",
             "https://unpkg.com/exifreader@4.33.1/dist/exif-reader.min.js"
@@ -196,14 +193,13 @@
         let state = { tags: {}, gps: null, address: null, file: null };
         const el = (id) => document.getElementById(id);
 
-        // 1. INIT
+        // --- 1. RESILIENT LOADING ---
         async function init() {
             if(window.ExifReader) { ready(); return; }
             for(let u of LIBS) {
                 el('status').innerText = "Connecting...";
                 try { await load(u); if(window.ExifReader){ ready(); return; } } catch(e){}
             }
-            // Fail
             el('dot').className = "dot err";
             el('status').innerText = "Blocked";
             el('viewUpload').style.display = 'none';
@@ -246,7 +242,7 @@
             };
         }
 
-        // 2. PROCESS
+        // --- 2. PROCESS FILE ---
         async function process(file) {
             if(!file) return;
             state = { tags: {}, gps: null, address: null, file: file };
@@ -255,20 +251,20 @@
             el('viewDash').style.display = 'flex';
             el('fName').innerText = file.name;
             el('fSize').innerText = (file.size/1024).toFixed(2) + " KB";
-            el('metaTable').innerHTML = '<tr><td colspan="2">Deep Scanning...</td></tr>';
+            el('metaTable').innerHTML = '<tr><td colspan="2">Processing...</td></tr>';
             el('locPanel').style.display = 'none';
             el('noGpsPanel').style.display = 'none';
 
             try {
-                // ENGINE
+                // EXIFREADER EXPANDED MODE = "Full ExifTool" Capability
                 const tags = await ExifReader.load(file, { expanded: true });
                 state.tags = tags;
                 
                 renderTable(tags);
                 renderThumb(tags, file);
                 
-                // DEEP GPS SEARCH
-                const coords = deepSearchGPS(tags);
+                // DEEP GPS SCAN
+                const coords = deepGPS(tags);
                 if(coords) {
                     state.gps = coords;
                     showGPS(coords);
@@ -282,52 +278,53 @@
             }
         }
 
-        // 3. DEEP GPS ENGINE (The Fix for your Error)
-        function deepSearchGPS(tags) {
+        // --- 3. DIRECTIONAL GPS LOGIC (Fixes the issue) ---
+        function deepGPS(tags) {
             let lat = null, lon = null;
+            let latRef = null, lonRef = null;
 
-            // Helper to clean mixed string/number values
-            const clean = (val) => {
-                if(Array.isArray(val)) return val[0]; // Take first if array
-                if(typeof val === 'object' && val.description) return val.description;
-                if(typeof val === 'object' && val.value) return val.value;
-                return val;
+            // 1. Helper: Is this a GPS-looking key?
+            const isLat = k => k.toLowerCase().includes('latitude') && !k.toLowerCase().includes('ref');
+            const isLon = k => k.toLowerCase().includes('longitude') && !k.toLowerCase().includes('ref');
+            const isLatRef = k => k.toLowerCase().includes('latitude') && k.toLowerCase().includes('ref');
+            const isLonRef = k => k.toLowerCase().includes('longitude') && k.toLowerCase().includes('ref');
+
+            // 2. Helper: Parse Value
+            const parse = v => {
+                if(Array.isArray(v)) return parseFloat(v[0]);
+                if(typeof v === 'number') return v;
+                if(typeof v === 'string') return parseFloat(v.replace(/[^\d.-]/g, ''));
+                if(typeof v === 'object' && v.description) return parseFloat(String(v.description).replace(/[^\d.-]/g, ''));
+                return null;
             };
 
-            // Helper to check if a value looks like a coordinate
-            const isCoord = (v) => {
-                if(!v) return false;
-                const s = String(v).replace(/[^\d.-]/g, ''); // strip non-numeric
-                const n = parseFloat(s);
-                // Valid lat is -90 to 90
-                return !isNaN(n) && n !== 0 && Math.abs(n) <= 180;
+            const parseRef = v => {
+                let s = "";
+                if(Array.isArray(v)) s = v[0];
+                else if(typeof v === 'object' && v.value) s = v.value[0];
+                else s = String(v);
+                return s.toUpperCase().charAt(0); // Returns N, S, E, or W
             };
 
-            const parseVal = (v) => parseFloat(String(v).replace(/[^\d.-]/g, ''));
-
-            // 1. Scan EVERY Group and EVERY Key for "Latitude" / "Longitude"
-            // This bypasses specific paths like tags.gps.Latitude
-            for(const group in tags) {
-                for(const key in tags[group]) {
-                    const keyLower = key.toLowerCase();
-                    const val = clean(tags[group][key]);
-
-                    if(!val) continue;
-
-                    // Match Latitude
-                    if(keyLower.includes('latitude') && !keyLower.includes('ref')) {
-                        if(isCoord(val)) lat = parseVal(val);
-                    }
-                    // Match Longitude
-                    if(keyLower.includes('longitude') && !keyLower.includes('ref')) {
-                        if(isCoord(val)) lon = parseVal(val);
-                    }
+            // 3. Scan Everything
+            for(const g in tags) {
+                for(const k in tags[g]) {
+                    const val = tags[g][k];
+                    if(isLat(k) && !lat) lat = parse(val);
+                    if(isLon(k) && !lon) lon = parse(val);
+                    
+                    // Look for References (N/S/E/W) to fix the negative sign issue
+                    if(isLatRef(k)) latRef = parseRef(val);
+                    if(isLonRef(k)) lonRef = parseRef(val);
                 }
             }
 
-            // If we found them via brute force scan
-            if(lat && lon) return { lat, lon };
-
+            // 4. Apply Directional Logic (Crucial for UK/USA/South locations)
+            if(lat !== null && lon !== null && !isNaN(lat) && !isNaN(lon)) {
+                if(latRef === 'S') lat = Math.abs(lat) * -1;
+                if(lonRef === 'W') lon = Math.abs(lon) * -1;
+                return { lat, lon };
+            }
             return null;
         }
 
@@ -336,12 +333,13 @@
             el('addrData').innerHTML = `
                 <div class="addr-row"><span>Lat:</span> <strong>${c.lat.toFixed(6)}</strong></div>
                 <div class="addr-row"><span>Lon:</span> <strong>${c.lon.toFixed(6)}</strong></div>
-                <div style="text-align:center; margin-top:5px; font-style:italic"><div class="spinner"></div> Resolving Address...</div>
+                <div style="text-align:center; margin-top:5px; font-style:italic"><div class="spinner"></div> Resolving...</div>
             `;
         }
 
         async function fetchAddr(c) {
             try {
+                // Using nominatim with jsonv2 for best structure
                 const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${c.lat}&lon=${c.lon}`);
                 const d = await r.json();
                 
@@ -350,22 +348,21 @@
                     state.address = {
                         Country: a.country,
                         City: a.city || a.town || a.village || a.county,
-                        Street: a.road || a.suburb,
+                        Street: a.road || a.suburb || a.hamlet,
                         Full: d.display_name
                     };
 
                     let h = '';
                     if(a.country) h += `<div class="addr-row"><span class="addr-key">Country:</span> <span>${a.country}</span></div>`;
-                    if(a.state) h += `<div class="addr-row"><span class="addr-key">State:</span> <span>${a.state}</span></div>`;
                     if(state.address.City) h += `<div class="addr-row"><span class="addr-key">City:</span> <span>${state.address.City}</span></div>`;
-                    if(a.road) h += `<div class="addr-row"><span class="addr-key">Street:</span> <span>${a.road}</span></div>`;
+                    if(state.address.Street) h += `<div class="addr-row"><span class="addr-key">Locality:</span> <span>${state.address.Street}</span></div>`;
                     
                     el('addrData').innerHTML = h;
                 } else {
-                    el('addrData').innerHTML += `<div style="color:orange; text-align:center">Address not found</div>`;
+                    el('addrData').innerHTML += `<div style="color:orange; text-align:center">No Address Found</div>`;
                 }
             } catch(e) {
-                el('addrData').innerHTML += `<div style="color:red; text-align:center">Map Service Offline</div>`;
+                el('addrData').innerHTML += `<div style="color:red; text-align:center">Service Offline</div>`;
             }
         }
 
@@ -373,7 +370,7 @@
             if(state.gps) window.open(`https://www.google.com/maps?q=${state.gps.lat},${state.gps.lon}`, '_blank');
         }
 
-        // 4. RENDER
+        // --- 4. RENDER & EXPORT ---
         function renderTable(tags) {
             const t = el('metaTable'); t.innerHTML = '';
             const gs = Object.keys(tags).sort();
@@ -391,7 +388,7 @@
                     if(typeof v === 'object') v = JSON.stringify(v);
                     
                     const r = document.createElement('tr');
-                    r.innerHTML = `<th>${k}</th><td>${String(v).substring(0,200)}</td>`;
+                    r.innerHTML = `<th>${k}</th><td>${String(v).substring(0,300)}</td>`;
                     t.appendChild(r);
                 }
             });
@@ -408,7 +405,6 @@
             }
         }
 
-        // 5. EXPORT
         function getFlat() {
             let r = [];
             if(state.address && state.address.Full) r.push(['LOCATION', 'Address', state.address.Full]);
@@ -425,12 +421,10 @@
         }
 
         function exportJSON() {
-            const d = { ...state.tags, EnrichedLocation: state.address, GPS: state.gps };
-            save(JSON.stringify(d, null, 2), 'meta.json', 'application/json');
+            save(JSON.stringify({ tags: state.tags, gps: state.gps, addr: state.address }, null, 2), 'meta.json', 'application/json');
         }
         function exportCSV() {
-            let c = "Group,Tag,Value\n";
-            getFlat().forEach(r => c += `"${r[0]}","${r[1]}","${r[2].replace(/"/g, '""')}"\n`);
+            let c = "Group,Tag,Value\n" + getFlat().map(r => `"${r[0]}","${r[1]}","${r[2].replace(/"/g,'""')}"`).join('\n');
             save(c, 'meta.csv', 'text/csv');
         }
         function exportTXT() {
@@ -461,7 +455,7 @@
             a.download = n; a.click();
         }
 
-        // THEME
+        // --- 5. THEME & SEARCH ---
         const tBtn = el('themeToggle');
         if(localStorage.getItem('theme')==='dark') document.body.setAttribute('data-theme','dark');
         tBtn.onclick = () => {
@@ -470,7 +464,6 @@
             localStorage.setItem('theme', d ? 'light':'dark');
         };
 
-        // SEARCH
         el('search').onkeyup = e => {
             const v = e.target.value.toLowerCase();
             document.querySelectorAll('#metaTable tr').forEach(r => {
