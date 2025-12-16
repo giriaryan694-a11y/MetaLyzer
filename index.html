@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MetaLyzer v8 - Precision Location</title>
+    <title>MetaLyzer v9 - Precision GPS Edition</title>
     
-    <!-- PDF Engines -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.4/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/5.0.2/jspdf.plugin.autotable.min.js"></script>
 
@@ -14,177 +13,159 @@
             --bg: #f8fafc;
             --surface: #ffffff;
             --text: #0f172a;
-            --text-dim: #64748b;
-            --brand: #2563eb;
-            --brand-fg: #ffffff;
+            --muted: #64748b;
+            --accent: #2563eb;
             --border: #e2e8f0;
-            --success: #22c55e;
-            --error: #ef4444;
-            --map-surface: #f0fdfa;
-            --map-border: #99f6e4;
+            --success: #16a34a;
+            --error: #dc2626;
+            --warn: #ca8a04;
         }
 
         [data-theme="dark"] {
             --bg: #0f172a;
             --surface: #1e293b;
-            --text: #f1f5f9;
-            --text-dim: #94a3b8;
-            --brand: #3b82f6;
+            --text: #f8fafc;
+            --muted: #94a3b8;
+            --accent: #60a5fa;
             --border: #334155;
-            --map-surface: #064e3b;
-            --map-border: #059669;
         }
 
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
-        * { box-sizing: border-box; transition: 0.2s ease-in-out; }
+        body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
+        * { box-sizing: border-box; }
 
         /* HEADER */
-        header { padding: 1rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 1.4rem; font-weight: 800; color: var(--brand); letter-spacing: -0.5px; display: flex; gap: 10px; align-items: center; }
+        header { padding: 15px 25px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .brand { font-size: 1.4rem; font-weight: 800; color: var(--accent); display: flex; align-items: center; gap: 10px; }
         .controls { display: flex; gap: 10px; align-items: center; }
-        .status-pill { font-size: 0.75rem; background: var(--bg); border: 1px solid var(--border); padding: 4px 10px; border-radius: 99px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #999; }
-        .dot.ok { background: var(--success); box-shadow: 0 0 5px var(--success); }
-        .dot.err { background: var(--error); }
-        .theme-toggle { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
-        .theme-toggle:hover { background: var(--bg); }
+        .badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--border); display: flex; align-items: center; gap: 5px; font-weight: 600; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; }
 
         /* MAIN */
-        main { flex: 1; padding: 20px; overflow: hidden; position: relative; display: flex; flex-direction: column; align-items: center; }
+        main { flex: 1; padding: 20px; overflow: hidden; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 1600px; margin: 0 auto; }
 
-        /* UPLOAD VIEW */
-        #viewUpload { width: 100%; max-width: 600px; margin-top: 10vh; display: flex; flex-direction: column; gap: 20px; }
-        .drop-zone { 
-            background: var(--surface); border: 2px dashed var(--border); border-radius: 16px; 
-            padding: 4rem 2rem; text-align: center; cursor: pointer; position: relative;
+        /* UPLOAD */
+        #view-upload { width: 100%; max-width: 600px; margin-top: 10vh; }
+        .drop-box { 
+            border: 2px dashed var(--border); background: var(--surface); border-radius: 16px; padding: 4rem 2rem; 
+            text-align: center; cursor: pointer; transition: 0.2s;
         }
-        .drop-zone:hover { border-color: var(--brand); transform: translateY(-3px); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1); }
-        .big-icon { font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.8; }
-        
+        .drop-box:hover { border-color: var(--accent); transform: scale(1.01); }
+
         /* MANUAL LOADER */
-        #manualUI { display: none; width: 100%; max-width: 600px; margin-top: 5vh; }
-        .err-card { border: 2px dashed var(--error); background: rgba(239, 68, 68, 0.05); padding: 2rem; border-radius: 12px; text-align: center; }
-        .link { color: var(--brand); font-weight: bold; text-decoration: underline; }
+        #view-manual { display: none; width: 100%; max-width: 600px; margin-top: 5vh; }
+        .err-box { border: 2px dashed var(--error); background: rgba(220, 38, 38, 0.05); padding: 2rem; border-radius: 12px; text-align: center; }
+        .d-link { color: var(--accent); font-weight: bold; text-decoration: underline; }
 
-        /* DASHBOARD VIEW */
-        #viewDash { display: none; width: 100%; height: 100%; gap: 20px; max-width: 1600px; }
+        /* DASHBOARD */
+        #view-dash { display: none; width: 100%; height: 100%; gap: 20px; }
         
-        .sidebar { width: 340px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; flex-shrink: 0; padding-bottom: 20px; }
-        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .col-left { width: 340px; display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; overflow-y: auto; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+
+        .thumb { width: 100%; height: 200px; background: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 10px; }
+        .thumb img { max-width: 100%; max-height: 100%; }
+
+        /* LOCATION CARD */
+        .gps-stat { font-weight: bold; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+        .gps-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 3px 0; }
+        .gps-key { opacity: 0.7; }
+        .gps-val { font-weight: 600; text-align: right; }
         
-        /* PREVIEW */
-        .thumb-box { width: 100%; height: 220px; background: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 12px; }
-        .thumb-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 5px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-pri { background: var(--accent); color: white; }
+        .btn-sec { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+        .btn-map { background: #dcfce7; color: #166534; border: 1px solid #16a34a; }
+        [data-theme="dark"] .btn-map { background: #14532d; color: #bbf7d0; border-color: #16a34a; }
 
-        /* MAP CARD */
-        .map-card { background: var(--map-surface); border: 1px solid var(--map-border); color: var(--text); }
-        .map-header { font-weight: 700; color: #059669; margin-bottom: 10px; display: flex; justify-content: space-between; }
-        .addr-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .addr-key { font-weight: 600; opacity: 0.7; }
-        .addr-val { text-align: right; }
-
-        /* BUTTONS */
-        .btn { width: 100%; padding: 10px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; }
-        .btn-pri { background: var(--brand); color: var(--brand-fg); }
-        .btn-pri:hover { opacity: 0.9; }
-        .btn-sec { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-        .btn-sec:hover { border-color: var(--brand); }
-
-        /* TABLE */
-        .data-container { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
-        .filter-box { padding: 12px; border-bottom: 1px solid var(--border); background: var(--bg); }
-        .filter-input { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); outline: none; }
+        /* DATA TABLE */
+        .col-right { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+        .search-wrap { padding: 10px; border-bottom: 1px solid var(--border); background: var(--bg); }
+        .search-box { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
         
-        .table-scroll { flex: 1; overflow-y: auto; }
+        .table-wrap { flex: 1; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th, td { padding: 10px 15px; text-align: left; border-bottom: 1px solid var(--border); }
-        th { width: 35%; color: var(--brand); font-family: monospace; position: sticky; top: 0; background: var(--surface); z-index: 2; }
+        th, td { padding: 8px 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--accent); width: 30%; position: sticky; top: 0; background: var(--surface); }
         td { font-family: monospace; word-break: break-all; }
-        
-        .grp-hdr { background: var(--border); color: var(--text); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding: 6px 15px; letter-spacing: 1px; }
+        .grp { background: var(--border); color: var(--text); font-weight: 800; font-size: 0.7rem; text-transform: uppercase; padding: 5px 15px; }
 
-        /* FOOTER */
-        footer { margin-top: auto; padding: 15px; text-align: center; color: var(--text-dim); font-size: 0.8rem; border-top: 1px solid var(--border); background: var(--surface); width: 100%; }
+        footer { margin-top: auto; padding: 15px; text-align: center; color: var(--muted); font-size: 0.8rem; background: var(--surface); border-top: 1px solid var(--border); width: 100%; }
 
-        @media (max-width: 900px) { #viewDash { flex-direction: column; } .sidebar { width: 100%; } }
+        @media (max-width: 900px) { #view-dash { flex-direction: column; } .col-left { width: 100%; } }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo"><span>🧭</span> MetaLyzer v8</div>
+        <div class="brand"><span>🛰️</span> MetaLyzer v9</div>
         <div class="controls">
-            <div class="status-pill"><div id="statusDot" class="dot"></div> <span id="statusText">System Init...</span></div>
-            <button id="themeToggle" class="theme-toggle">🌓 Theme</button>
+            <div class="badge"><div id="dot" class="dot" style="background:#999"></div> <span id="status">Init...</span></div>
+            <button onclick="toggleTheme()" class="btn-sec" style="padding: 5px 10px; margin:0;">🌓</button>
         </div>
     </header>
 
     <main>
-        <!-- 1. UPLOAD VIEW -->
-        <div id="viewUpload">
-            <div id="dropZone" class="drop-zone">
-                <div class="big-icon">📂</div>
+        <div id="view-upload">
+            <div id="drop-zone" class="drop-box">
+                <div style="font-size:3rem; opacity:0.7">📂</div>
                 <h2>Analyze File</h2>
-                <p style="color:var(--text-dim)">Drag & Drop Images, Video, PDF</p>
-                <input type="file" id="fileInput" style="display:none">
+                <p>Drag & Drop Images, Video, PDF</p>
+                <input type="file" id="file-in" style="display:none">
             </div>
         </div>
 
-        <!-- 2. MANUAL LOADER -->
-        <div id="manualUI">
-            <div class="err-card">
+        <div id="view-manual">
+            <div class="err-box">
                 <h2 style="color:var(--error)">⚠️ Network Blocked</h2>
-                <p>Automatic library loading failed. Load manually:</p>
-                <div style="background:var(--bg); padding:15px; border-radius:8px; margin:20px 0; text-align:left; font-size:0.9rem;">
-                    1. <a href="https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js" target="_blank" class="link">Download 'exif-reader.min.js'</a><br>
-                    2. Drag that file into the box below.
+                <p>Auto-load failed. Please load manually:</p>
+                <div style="background:var(--bg); padding:10px; text-align:left; border-radius:6px; margin:15px 0;">
+                    1. <a href="https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js" target="_blank" class="d-link">Download library file</a><br>
+                    2. Drag it into the box below.
                 </div>
-                <div id="manualDrop" style="border:2px dashed #777; padding:20px; border-radius:8px; cursor:pointer;">
-                    ⬇️ Drop <b>exif-reader.min.js</b> Here
-                </div>
+                <div id="manual-drop" style="border:2px dashed #777; padding:15px; border-radius:6px;">⬇️ Drop JS Here</div>
             </div>
         </div>
 
-        <!-- 3. DASHBOARD -->
-        <div id="viewDash">
-            <div class="sidebar">
-                <!-- Preview -->
-                <div class="panel">
-                    <div class="thumb-box" id="thumbBox"><span style="color:#666">No Preview</span></div>
-                    <div style="font-size:0.9rem; display:flex; justify-content:space-between;">
-                        <span id="fName" style="font-weight:bold">-</span>
-                        <span id="fSize" style="opacity:0.7">-</span>
+        <div id="view-dash">
+            <div class="col-left">
+                <div class="card">
+                    <div class="thumb" id="thumb"><span style="color:#666">No Preview</span></div>
+                    <div style="font-size:0.85rem;">
+                        <div class="gps-row"><span>File:</span> <strong id="fname">-</strong></div>
+                        <div class="gps-row"><span>Size:</span> <span id="fsize">-</span></div>
                     </div>
                 </div>
 
-                <!-- LOCATION CARD (Auto-Populates) -->
-                <div class="panel map-card" id="locPanel" style="display:none;">
-                    <div class="map-header">
-                        <span>📍 Location Intel</span>
-                        <span style="font-size:0.7em; opacity:0.7">GPS Found</span>
+                <div class="card" id="gps-card" style="display:none; border-left: 4px solid var(--success);">
+                    <div class="gps-stat" style="color:var(--success)">
+                        <span>📍 GPS Detected</span>
                     </div>
-                    <div id="addrData">
-                        <div style="text-align:center; padding:10px;">Resolving Address...</div>
+                    <div id="gps-data">Loading Address...</div>
+                    <button class="btn btn-map" onclick="openMap()">View on Google Maps</button>
+                </div>
+                
+                <div class="card" id="no-gps-msg" style="display:none; border-left: 4px solid var(--warn);">
+                    <div class="gps-stat" style="color:var(--warn)">
+                        <span>⚠️ No GPS Data</span>
                     </div>
-                    <button class="btn" style="background:white; color:#059669; border:1px solid #059669" onclick="openMap()">View on Google Maps</button>
+                    <div style="font-size:0.8rem; opacity:0.8">This file contains no embedded location coordinates.</div>
                 </div>
 
-                <!-- Export -->
-                <div class="panel">
-                    <button class="btn btn-sec" onclick="exportJSON()">{} JSON</button>
-                    <button class="btn btn-sec" onclick="exportCSV()">📊 CSV</button>
-                    <button class="btn btn-sec" onclick="exportTXT()">📝 TXT</button>
-                    <button class="btn btn-pri" onclick="exportPDF()">📄 PDF Report</button>
-                    <button class="btn btn-sec" style="color:var(--error); border-color:var(--error)" onclick="location.reload()">Reset Tool</button>
+                <div class="card">
+                    <button class="btn btn-sec" onclick="dl('json')">{} JSON</button>
+                    <button class="btn btn-sec" onclick="dl('csv')">📊 CSV</button>
+                    <button class="btn btn-sec" onclick="dl('txt')">📝 TXT</button>
+                    <button class="btn btn-pri" onclick="dl('pdf')">📄 PDF Report</button>
+                    <button class="btn btn-sec" style="color:var(--error); border-color:var(--error)" onclick="location.reload()">Reset</button>
                 </div>
             </div>
 
-            <div class="data-container">
-                <div class="filter-box">
-                    <input type="text" id="search" class="filter-input" placeholder="Search metadata tags...">
+            <div class="col-right">
+                <div class="search-wrap">
+                    <input type="text" id="search" class="search-box" placeholder="Filter tags...">
                 </div>
-                <div class="table-scroll">
-                    <table id="metaTable"></table>
+                <div class="table-wrap">
+                    <table id="table"></table>
                 </div>
             </div>
         </div>
@@ -193,71 +174,52 @@
     <footer>Made By Aryan Giri</footer>
 
     <script>
-        // --- 1. CONFIG & STATE ---
+        // CONFIG
         const LIB_URLS = [
             "https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js",
             "https://unpkg.com/exifreader@4.33.1/dist/exif-reader.min.js"
         ];
-        
-        let fileData = {};
-        let currentFile = null;
-        let enrichedGeo = null; // Stores fetched address
-        let gpsRaw = null; // Stores numeric lat/lon
 
-        const UI = {
-            statusD: document.getElementById('statusDot'),
-            statusT: document.getElementById('statusText'),
-            drop: document.getElementById('dropZone'),
-            input: document.getElementById('fileInput'),
-            upload: document.getElementById('viewUpload'),
-            manual: document.getElementById('manualUI'),
-            dash: document.getElementById('viewDash'),
-            table: document.getElementById('metaTable'),
-            thumb: document.getElementById('thumbBox'),
-            locPanel: document.getElementById('locPanel'),
-            addrData: document.getElementById('addrData')
-        };
+        let state = { tags: {}, file: null, gps: null, address: null };
+        const el = (id) => document.getElementById(id);
 
-        // --- 2. RESILIENT LOADER ---
+        // 1. INIT
         async function init() {
             if(window.ExifReader) { ready(); return; }
-            for(let url of LIB_URLS) {
-                UI.statusT.innerText = `Connecting: ${new URL(url).hostname}`;
-                try {
-                    await loadScript(url);
-                    if(window.ExifReader) { ready(); return; }
-                } catch(e) { console.log(e); }
+            for(let u of LIB_URLS) {
+                el('status').innerText = "Connecting...";
+                try { await load(u); if(window.ExifReader){ ready(); return; } } catch(e){}
             }
-            // Fallback
-            UI.statusD.className = "dot err";
-            UI.statusT.innerText = "Network Error";
-            UI.upload.style.display = 'none';
-            UI.manual.style.display = 'block';
+            // Fail
+            el('dot').style.background = 'var(--error)';
+            el('status').innerText = "Blocked";
+            el('view-upload').style.display = 'none';
+            el('view-manual').style.display = 'block';
             setupManual();
         }
 
-        function loadScript(src) {
-            return new Promise((resolve, reject) => {
+        function load(src) {
+            return new Promise((res, rej) => {
                 const s = document.createElement('script'); s.src = src;
-                s.onload = resolve; s.onerror = reject; document.head.appendChild(s);
+                s.onload = res; s.onerror = rej; document.head.appendChild(s);
             });
         }
 
         function ready() {
-            UI.statusD.className = "dot ok";
-            UI.statusT.innerText = "Ready";
-            UI.manual.style.display = 'none';
-            UI.upload.style.display = 'flex';
+            el('dot').style.background = 'var(--success)';
+            el('status').innerText = "Ready";
+            el('view-manual').style.display = 'none';
+            el('view-upload').style.display = 'block';
             
-            UI.drop.onclick = () => UI.input.click();
-            UI.input.onchange = e => process(e.target.files[0]);
-            UI.drop.ondragover = e => { e.preventDefault(); UI.drop.style.borderColor = 'var(--brand)'; };
-            UI.drop.ondragleave = () => UI.drop.style.borderColor = 'var(--border)';
-            UI.drop.ondrop = e => { e.preventDefault(); process(e.dataTransfer.files[0]); };
+            el('drop-zone').onclick = () => el('file-in').click();
+            el('file-in').onchange = e => process(e.target.files[0]);
+            el('drop-zone').ondragover = e => { e.preventDefault(); el('drop-zone').style.borderColor = 'var(--accent)'; };
+            el('drop-zone').ondragleave = () => el('drop-zone').style.borderColor = 'var(--border)';
+            el('drop-zone').ondrop = e => { e.preventDefault(); process(e.dataTransfer.files[0]); };
         }
 
         function setupManual() {
-            const z = document.getElementById('manualDrop');
+            const z = el('manual-drop');
             z.ondragover = e => e.preventDefault();
             z.ondrop = e => {
                 e.preventDefault();
@@ -265,51 +227,151 @@
                 r.onload = ev => {
                     const s = document.createElement('script'); s.innerHTML = ev.target.result;
                     document.head.appendChild(s);
-                    setTimeout(() => { if(window.ExifReader) ready(); else alert("Invalid library file."); }, 100);
+                    setTimeout(() => { if(window.ExifReader) ready(); else alert("Bad File"); }, 100);
                 };
                 r.readAsText(e.dataTransfer.files[0]);
             };
         }
 
-        // --- 3. CORE LOGIC ---
+        // 2. PROCESS
         async function process(file) {
             if(!file) return;
-            currentFile = file;
-            enrichedGeo = null; gpsRaw = null;
+            state = { tags: {}, file: file, gps: null, address: null };
 
-            UI.upload.style.display = 'none';
-            UI.dash.style.display = 'flex';
-            document.getElementById('fName').innerText = file.name;
-            document.getElementById('fSize').innerText = (file.size/1024).toFixed(2) + " KB";
-            UI.table.innerHTML = '<tr><td colspan="2">Analyzing...</td></tr>';
-            UI.locPanel.style.display = 'none';
+            el('view-upload').style.display = 'none';
+            el('view-dash').style.display = 'flex';
+            el('fname').innerText = file.name;
+            el('fsize').innerText = (file.size/1024).toFixed(2) + " KB";
+            el('table').innerHTML = '<tr><td colspan="2">Scanning...</td></tr>';
+            el('gps-card').style.display = 'none';
+            el('no-gps-msg').style.display = 'none';
 
             try {
-                // THE KEY: expanded: true
+                // FORCE EXPANDED FOR DEEP SCAN
                 const tags = await ExifReader.load(file, { expanded: true });
-                fileData = tags;
+                state.tags = tags;
                 
                 renderTable(tags);
-                renderPreview(tags, file);
+                renderThumb(tags, file);
                 
-                // Trigger Location Logic
-                await detectAndResolveGPS(tags);
+                // NEW: Calculate GPS
+                const coords = extractGPS(tags);
+                if(coords) {
+                    state.gps = coords;
+                    showGPS(coords);
+                    fetchAddress(coords);
+                } else {
+                    el('no-gps-msg').style.display = 'block';
+                }
 
             } catch(e) {
-                UI.table.innerHTML = `<tr><td style="color:red">Error: ${e.message}</td></tr>`;
+                el('table').innerHTML = `<tr><td style="color:red">Error: ${e.message}</td></tr>`;
             }
         }
 
-        function renderTable(tags) {
-            UI.table.innerHTML = '';
-            const groups = Object.keys(tags).sort();
-            if(!groups.length) { UI.table.innerHTML = '<tr><td>No Data</td></tr>'; return; }
+        // 3. MILITARY GRADE GPS PARSER
+        function extractGPS(tags) {
+            // Need both groups (EXIF or GPS)
+            // ExifReader "expanded" puts GPS usually in 'gps' group or 'exif' group.
+            
+            let lat = null, lon = null;
 
-            groups.forEach(g => {
+            // Helper to convert Rational [num, den] to decimal
+            const parseRat = (val) => {
+                if(Array.isArray(val) && val.length === 2) return val[0] / val[1];
+                return val;
+            };
+
+            // Helper to convert DMS Array to DD
+            const dmsToDd = (dms, ref) => {
+                // dms is usually [[deg,1], [min,1], [sec,1]]
+                if(!Array.isArray(dms)) return null;
+                const d = parseRat(dms[0]);
+                const m = parseRat(dms[1]);
+                const s = parseRat(dms[2]);
+                let dd = d + (m/60) + (s/3600);
+                if(ref === 'S' || ref === 'W') dd = dd * -1;
+                return dd;
+            };
+
+            // TRY 1: 'gps' Group (Most common for ExifReader)
+            if(tags.gps) {
+                if(tags.gps.Latitude && tags.gps.Longitude) {
+                    // Check if it's raw DMS array
+                    if(Array.isArray(tags.gps.Latitude) && tags.gps.LatitudeRef) {
+                        lat = dmsToDd(tags.gps.Latitude, tags.gps.LatitudeRef);
+                        lon = dmsToDd(tags.gps.Longitude, tags.gps.LongitudeRef);
+                    } 
+                    // Or pre-calculated description (sometimes happens)
+                    else if (tags.gps.Latitude.description) {
+                         // Fallback to simpler parse if text is "40.23"
+                         lat = parseFloat(tags.gps.Latitude.description);
+                         lon = parseFloat(tags.gps.Longitude.description);
+                    }
+                }
+            }
+
+            // Valid Check
+            if(lat && lon && !isNaN(lat) && !isNaN(lon)) return { lat, lon };
+            return null;
+        }
+
+        function showGPS(c) {
+            el('gps-card').style.display = 'block';
+            // Start with coords while loading address
+            el('gps-data').innerHTML = `
+                <div class="gps-row"><span>Lat:</span> <strong>${c.lat.toFixed(5)}</strong></div>
+                <div class="gps-row"><span>Lon:</span> <strong>${c.lon.toFixed(5)}</strong></div>
+                <div style="text-align:center; padding-top:5px; font-style:italic">Fetching City...</div>
+            `;
+        }
+
+        async function fetchAddress(c) {
+            try {
+                // HTTPS IS MANDATORY
+                const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${c.lat}&lon=${c.lon}`);
+                const d = await r.json();
+                
+                if(d.address) {
+                    const a = d.address;
+                    state.address = {
+                        Country: a.country,
+                        City: a.city || a.town || a.village || a.county,
+                        Street: a.road || a.suburb,
+                        Full: d.display_name
+                    };
+
+                    let html = '';
+                    if(state.address.Country) html += row('Country', state.address.Country);
+                    if(state.address.City) html += row('City/Town', state.address.City);
+                    if(state.address.Street) html += row('Street', state.address.Street);
+                    
+                    el('gps-data').innerHTML = html;
+                } else {
+                    el('gps-data').innerHTML += `<div style="color:orange">Address Not Found</div>`;
+                }
+            } catch(e) {
+                el('gps-data').innerHTML += `<div style="color:red">Map Offline</div>`;
+            }
+        }
+
+        function row(k, v) { return `<div class="gps-row"><span class="gps-key">${k}:</span> <span class="gps-val">${v}</span></div>`; }
+
+        function openMap() {
+            if(state.gps) window.open(`https://www.google.com/maps?q=${state.gps.lat},${state.gps.lon}`, '_blank');
+        }
+
+        // 4. UI RENDER
+        function renderTable(tags) {
+            const t = el('table'); t.innerHTML = '';
+            const gs = Object.keys(tags).sort();
+            if(!gs.length) { t.innerHTML = '<tr><td>No Tags</td></tr>'; return; }
+
+            gs.forEach(g => {
                 if(g === 'thumbnail') return;
                 const h = document.createElement('tr');
-                h.innerHTML = `<td colspan="2" class="grp-hdr">${g}</td>`;
-                UI.table.appendChild(h);
+                h.innerHTML = `<td colspan="2" class="grp">${g}</td>`;
+                t.appendChild(h);
 
                 for(let k in tags[g]) {
                     let v = tags[g][k].description || tags[g][k].value;
@@ -317,187 +379,90 @@
                     if(typeof v === 'object') v = JSON.stringify(v);
                     
                     const r = document.createElement('tr');
-                    r.innerHTML = `<th>${k}</th><td>${String(v).substring(0,250)}</td>`;
-                    UI.table.appendChild(r);
+                    r.innerHTML = `<th>${k}</th><td>${String(v).substring(0,200)}</td>`;
+                    t.appendChild(r);
                 }
             });
         }
 
-        function renderPreview(tags, file) {
-            UI.thumb.innerHTML = '';
+        function renderThumb(tags, file) {
+            const b = el('thumb'); b.innerHTML = '';
             if(tags.thumbnail) {
-                const img = document.createElement('img'); img.src = tags.thumbnail;
-                UI.thumb.appendChild(img);
+                const i = document.createElement('img'); i.src = tags.thumbnail; b.appendChild(i);
             } else if(file.type.startsWith('image/')) {
-                const img = document.createElement('img'); img.src = URL.createObjectURL(file);
-                UI.thumb.appendChild(img);
+                const i = document.createElement('img'); i.src = URL.createObjectURL(file); b.appendChild(i);
             } else {
-                UI.thumb.innerHTML = '<span style="color:#666">No Preview</span>';
+                b.innerHTML = '<span style="color:#777">No Preview</span>';
             }
         }
 
-        // --- 4. ROBUST GPS & REVERSE GEOCODING ---
-        async function detectAndResolveGPS(tags) {
-            let lat = null, lon = null;
-
-            // Strategy A: Check 'gps' group (ExifReader standard)
-            if(tags.gps) {
-                // Sometimes it is Description (string with "degrees"), sometimes raw Value (numeric)
-                if(tags.gps.Latitude && tags.gps.Longitude) {
-                    lat = parseFloat(cleanCoord(tags.gps.Latitude));
-                    lon = parseFloat(cleanCoord(tags.gps.Longitude));
-                }
-            }
-
-            // Strategy B: Check top level (rare but possible in some builds)
-            if(!lat && tags.Latitude && tags.Longitude) {
-                lat = parseFloat(tags.Latitude); lon = parseFloat(tags.Longitude);
-            }
-
-            if(lat && lon && !isNaN(lat) && !isNaN(lon)) {
-                gpsRaw = { lat, lon };
-                
-                // Show Card Immediately
-                UI.locPanel.style.display = 'block';
-                UI.addrData.innerHTML = `<div style="text-align:center; opacity:0.8">${lat.toFixed(5)}, ${lon.toFixed(5)}<br><b>Fetching City info...</b></div>`;
-
-                // Fetch City/Country
-                try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`);
-                    const data = await res.json();
-                    
-                    if(data.address) {
-                        const a = data.address;
-                        let html = '';
-                        // Build Rows
-                        if(a.country) html += locRow('Country', a.country);
-                        if(a.state) html += locRow('State', a.state);
-                        if(a.city || a.town || a.village) html += locRow('City', a.city || a.town || a.village);
-                        if(a.road) html += locRow('Street', a.road);
-                        if(a.postcode) html += locRow('Zip', a.postcode);
-
-                        UI.addrData.innerHTML = html;
-                        
-                        // Store
-                        enrichedGeo = {
-                            Country: a.country,
-                            City: a.city || a.town || a.village,
-                            FullAddress: data.display_name
-                        };
-                    }
-                } catch(err) {
-                    UI.addrData.innerHTML = `<div style="text-align:center; color:#d97706">Address lookup failed (Network)</div>`;
-                }
-            }
-        }
-
-        function cleanCoord(val) {
-            // If it is an object/description like "40 degrees...", strip string
-            if(typeof val === 'object' && val.description) return String(val.description).replace(/[^\d.-]/g, ''); 
-            if(typeof val === 'string') return val.replace(/[^\d.-]/g, '');
-            return val; // It is likely a number
-        }
-
-        function locRow(k, v) {
-            return `<div class="addr-row"><span class="addr-key">${k}:</span> <span class="addr-val">${v}</span></div>`;
-        }
-
-        function openMap() {
-            if(gpsRaw) window.open(`https://www.google.com/maps?q=${gpsRaw.lat},${gpsRaw.lon}`, '_blank');
-        }
-
-        // --- 5. EXPORTS ---
-        function getExportRows() {
-            let rows = [];
-            if(enrichedGeo) {
-                if(enrichedGeo.Country) rows.push(['LOCATION_INTEL', 'Country', enrichedGeo.Country]);
-                if(enrichedGeo.City) rows.push(['LOCATION_INTEL', 'City', enrichedGeo.City]);
-                if(enrichedGeo.FullAddress) rows.push(['LOCATION_INTEL', 'Full Address', enrichedGeo.FullAddress]);
-            }
-            if(gpsRaw) rows.push(['LOCATION_INTEL', 'Coordinates', `${gpsRaw.lat}, ${gpsRaw.lon}`]);
-
-            for(let g in fileData) {
-                if(g === 'thumbnail') continue;
-                for(let k in fileData[g]) {
-                    let v = fileData[g][k].description || fileData[g][k].value;
-                    rows.push([g, k, String(v)]);
-                }
-            }
-            return rows;
-        }
-
-        function exportJSON() {
-            const d = { ...fileData, EnrichedLocation: enrichedGeo, GPS: gpsRaw };
-            save(JSON.stringify(d, null, 2), 'meta.json', 'application/json');
-        }
-
-        function exportCSV() {
-            let csv = "Group,Tag,Value\n";
-            getExportRows().forEach(r => csv += `"${r[0]}","${r[1]}","${r[2].replace(/"/g, '""').replace(/\n/g, ' ')}"\n`);
-            save(csv, 'meta.csv', 'text/csv');
-        }
-
-        function exportTXT() {
-            let txt = `METALYZER REPORT - ${currentFile.name}\n\n`;
-            if(enrichedGeo && enrichedGeo.FullAddress) txt += `[LOCATION]\n${enrichedGeo.FullAddress}\n\n`;
-            for(let g in fileData) {
+        // 5. EXPORT
+        function getFlat() {
+            let r = [];
+            if(state.address && state.address.Full) r.push(['LOCATION', 'Address', state.address.Full]);
+            if(state.gps) r.push(['LOCATION', 'Coords', `${state.gps.lat}, ${state.gps.lon}`]);
+            
+            for(let g in state.tags) {
                 if(g==='thumbnail') continue;
-                txt += `[${g}]\n`;
-                for(let k in fileData[g]) {
-                    let v = fileData[g][k].description || fileData[g][k].value;
-                    txt += `${k}: ${v}\n`;
+                for(let k in state.tags[g]) {
+                    let v = state.tags[g][k].description || state.tags[g][k].value;
+                    r.push([g, k, String(v)]);
                 }
             }
-            save(txt, 'meta.txt', 'text/plain');
+            return r;
         }
 
-        function exportPDF() {
-            if(!window.jspdf) { alert("PDF Lib failed to load."); return; }
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            doc.setTextColor(37, 99, 235); doc.setFontSize(18); doc.text("MetaLyzer Report", 14, 20);
-            doc.setTextColor(60); doc.setFontSize(10); doc.text(`File: ${currentFile.name}`, 14, 28);
-            doc.text("Made By Aryan Giri", 14, 34);
-
-            if(enrichedGeo && enrichedGeo.FullAddress) {
-                const add = doc.splitTextToSize("Loc: " + enrichedGeo.FullAddress, 180);
-                doc.text(add, 14, 40);
+        function dl(type) {
+            let c = "", n = "meta", m = "";
+            const d = getFlat();
+            
+            if(type === 'json') {
+                c = JSON.stringify({ tags: state.tags, gps: state.gps, addr: state.address }, null, 2);
+                n += ".json"; m = "application/json";
+            } else if (type === 'csv') {
+                c = "Group,Tag,Value\n" + d.map(r => `"${r[0]}","${r[1]}","${r[2].replace(/"/g,'""')}"`).join('\n');
+                n += ".csv"; m = "text/csv";
+            } else if (type === 'txt') {
+                c = `METALYZER REPORT\nFile: ${state.file.name}\n\n`;
+                if(state.address) c+= `LOCATION: ${state.address.Full}\n\n`;
+                d.forEach(r => c += `[${r[0]}] ${r[1]}: ${r[2]}\n`);
+                n += ".txt"; m = "text/plain";
+            } else if (type === 'pdf') {
+                if(!window.jspdf) { alert("PDF Lib Missing"); return; }
+                const doc = new window.jspdf.jsPDF();
+                doc.setTextColor(37, 99, 235); doc.setFontSize(18); doc.text("MetaLyzer Report", 14, 20);
+                doc.setTextColor(60); doc.setFontSize(10); doc.text(`File: ${state.file.name}`, 14, 28);
+                doc.text("Made By Aryan Giri", 14, 34);
+                if(state.address) {
+                    const addr = doc.splitTextToSize("Loc: " + state.address.Full, 180);
+                    doc.text(addr, 14, 40);
+                }
+                doc.autoTable({
+                    startY: 50, head: [['Group','Tag','Value']], body: d,
+                    theme: 'grid', headStyles: {fillColor:[37,99,235]}, columnStyles:{0:{cellWidth:30},1:{cellWidth:40}}
+                });
+                doc.save('report.pdf');
+                return;
             }
 
-            doc.autoTable({
-                startY: 50,
-                head: [['Group', 'Tag', 'Value']],
-                body: getExportRows(),
-                theme: 'grid',
-                headStyles: { fillColor: [37, 99, 235] },
-                columnStyles: { 0: {cellWidth: 30}, 1: {cellWidth: 40} }
-            });
-            doc.save('report.pdf');
-        }
-
-        function save(content, name, type) {
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(new Blob([content], {type:type}));
-            a.download = name; a.click();
+            a.href = URL.createObjectURL(new Blob([c], {type:m}));
+            a.download = n; a.click();
         }
 
-        // --- 6. UTILS ---
-        // Theme Persistence
-        const toggle = document.getElementById('themeToggle');
-        if(localStorage.getItem('theme')==='dark') document.body.setAttribute('data-theme', 'dark');
-        
-        toggle.onclick = () => {
-            const isDark = document.body.getAttribute('data-theme') === 'dark';
-            document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
-            localStorage.setItem('theme', isDark ? 'light' : 'dark');
-        };
+        // THEME
+        function toggleTheme() {
+            const d = document.body.getAttribute('data-theme') === 'dark';
+            document.body.setAttribute('data-theme', d ? 'light' : 'dark');
+            localStorage.setItem('theme', d ? 'light' : 'dark');
+        }
+        if(localStorage.getItem('theme')==='dark') toggleTheme();
 
-        // Search
-        document.getElementById('search').onkeyup = e => {
-            const term = e.target.value.toLowerCase();
-            document.querySelectorAll('#metaTable tr').forEach(r => {
-                if(!r.classList.contains('grp-hdr')) r.style.display = r.innerText.toLowerCase().includes(term) ? '' : 'none';
+        // SEARCH
+        el('search').onkeyup = e => {
+            const v = e.target.value.toLowerCase();
+            document.querySelectorAll('#table tr').forEach(r => {
+                if(!r.classList.contains('grp')) r.style.display = r.innerText.toLowerCase().includes(v) ? '' : 'none';
             });
         };
 
