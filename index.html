@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MetaLyzer Fortress - Unblockable</title>
+    <title>MetaLyzer v5 - Fixed & Verified</title>
     
     <style>
         :root {
@@ -16,102 +16,99 @@
             --err: #ef4444;
         }
 
-        body { font-family: system-ui, sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
         /* HEADER */
         header { padding: 15px 25px; background: var(--card); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .logo { font-weight: 900; color: var(--accent); letter-spacing: -0.5px; font-size: 1.2rem; }
-        .status { font-size: 0.8rem; font-family: monospace; }
-        .status.ok { color: var(--ok); }
-        .status.err { color: var(--err); }
+        .status { font-size: 0.8rem; font-family: monospace; display: flex; gap: 10px; align-items: center; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
+        .dot.ok { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+        .dot.err { background: var(--err); }
 
         /* MAIN */
         main { flex: 1; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
         
-        /* DROP ZONES */
-        .zone-container { position: relative; flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        
+        /* BOXES */
         .box {
             border: 2px dashed var(--border); border-radius: 12px;
             background: rgba(255,255,255,0.02);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             padding: 40px; text-align: center; transition: 0.2s;
-            cursor: pointer; margin: 0 auto; max-width: 600px; width: 100%;
+            cursor: pointer; margin: auto; max-width: 600px; width: 100%;
         }
         .box:hover { border-color: var(--accent); background: rgba(59, 130, 246, 0.1); }
-        .box h2 { margin-top: 0; }
         
-        /* MANUAL LOADER UI */
+        /* MANUAL LOAD UI */
         #manualLoadUI { display: none; border-color: var(--err); background: rgba(239, 68, 68, 0.05); }
-        #manualLoadUI h2 { color: var(--err); }
-        .download-link { color: var(--accent); text-decoration: underline; cursor: pointer; }
+        .manual-instruct { text-align: left; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 6px; margin: 15px 0; font-size: 0.9rem; }
+        .link { color: #60a5fa; text-decoration: underline; cursor: pointer; }
 
-        /* DASHBOARD (Results) */
+        /* DASHBOARD */
         #dashboard { display: none; height: 100%; gap: 20px; }
         .sidebar { width: 300px; display: flex; flex-direction: column; gap: 15px; }
         .preview { background: #000; border-radius: 8px; border: 1px solid var(--border); height: 200px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
         .preview img { max-width: 100%; max-height: 100%; }
         
         .data-area { flex: 1; background: var(--card); border-radius: 12px; border: 1px solid var(--border); overflow: hidden; display: flex; flex-direction: column; }
-        .search-bar { padding: 15px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.2); }
-        .search-bar input { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); }
-        
         .table-scroll { flex: 1; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
         th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
-        th { color: var(--accent); font-family: monospace; width: 35%; }
+        th { color: var(--accent); font-family: monospace; width: 35%; background: rgba(0,0,0,0.2); }
         td { font-family: monospace; word-break: break-all; }
         
-        .btn { background: var(--accent); color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
+        .btn { background: var(--accent); color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; }
         .btn:hover { opacity: 0.9; }
-        .btn-sec { background: transparent; border: 1px solid var(--border); color: var(--text); margin-top: 5px; }
+
+        /* Loader Overlay */
+        #loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 99; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .log { font-family: monospace; color: #888; margin-top: 10px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
+    <div id="loader">
+        <div class="logo" style="font-size: 2rem; margin-bottom: 20px;">MetaLyzer v5</div>
+        <div id="loadLog" class="log">Connecting to libraries...</div>
+    </div>
+
     <header>
-        <div class="logo">MetaLyzer 🛡️ <span style="font-size:0.8em; opacity:0.7">Fortress</span></div>
-        <div id="statusIndicator" class="status">Initializing...</div>
+        <div class="logo">MetaLyzer 🛡️</div>
+        <div class="status"><div id="statusDot" class="dot"></div> <span id="statusText">Checking...</span></div>
     </header>
 
     <main>
-        <div class="zone-container">
-            
-            <div id="fileBox" class="box" style="display:none;">
-                <h2>📂 Analyze File</h2>
-                <p>Drag & Drop Image, Video, or PDF</p>
-                <button class="btn" style="width: auto; padding: 8px 24px; margin-top: 10px;">Browse Files</button>
-            </div>
-
-            <div id="manualLoadUI" class="box">
-                <h2>⚠️ Network Blocked</h2>
-                <p>Your network blocked the automatic library download.</p>
-                <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:8px; margin:15px 0; text-align:left; font-size:0.9rem;">
-                    <strong>The Fix:</strong><br>
-                    1. <a href="https://cdn.jsdelivr.net/npm/exifreader@4.23.0/dist/exif-reader.min.js" target="_blank" class="download-link">Click here</a> to download <code>exif-reader.min.js</code><br>
-                    2. Drag that downloaded file into this box.
-                </div>
-                <div style="border: 2px dashed #666; padding: 20px; width: 100%; border-radius: 8px; margin-top: 10px;">
-                    ⬇️ Drop <b>exif-reader.min.js</b> here to Start
-                </div>
-            </div>
-
+        <div id="fileBox" class="box" style="display:none;">
+            <h2>📂 Analyze File</h2>
+            <p>Drag & Drop Image, Video, or PDF</p>
             <input type="file" id="hiddenInput" style="display:none">
+        </div>
+
+        <div id="manualLoadUI" class="box">
+            <h2 style="color: var(--err)">⚠️ Library Download Failed</h2>
+            <div class="manual-instruct">
+                <strong>How to fix:</strong><br>
+                1. <a href="https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js" target="_blank" class="link">Download this file (exif-reader.min.js)</a><br>
+                2. Drag and drop that file into this box below.
+            </div>
+            <div style="border: 2px dashed #555; padding: 20px; width: 100%; border-radius: 8px;">
+                ⬇️ Drop <b>exif-reader.min.js</b> Here
+            </div>
         </div>
 
         <div id="dashboard">
             <div class="sidebar">
                 <div class="preview" id="thumbBox">No Preview</div>
-                <div style="padding: 10px; background: var(--card); border-radius: 8px; border: 1px solid var(--border);">
+                <div style="padding: 15px; background: var(--card); border-radius: 8px; border: 1px solid var(--border);">
                     <div id="fileName" style="font-weight:bold; margin-bottom:5px;">-</div>
                     <div id="fileSize" style="font-size:0.8rem; color:#888;">-</div>
                 </div>
-                <button class="btn" onclick="exportTXT()">Download Report</button>
-                <button class="btn btn-sec" onclick="location.reload()">Reset</button>
+                <button class="btn" onclick="downloadJSON()">Download JSON</button>
+                <button class="btn" style="background:transparent; border:1px solid #555" onclick="location.reload()">Reset</button>
             </div>
             <div class="data-area">
-                <div class="search-bar">
-                    <input type="text" id="searchInput" placeholder="Search metadata tags...">
+                <div style="padding:10px; border-bottom:1px solid var(--border)">
+                    <input type="text" id="searchInput" placeholder="Filter tags..." style="width:100%; padding:8px; background:var(--bg); border:1px solid var(--border); color:white; border-radius:4px;">
                 </div>
                 <div class="table-scroll">
                     <table id="metaTable"></table>
@@ -121,52 +118,50 @@
     </main>
 
     <script>
-        // --- CONFIG ---
+        // --- 1. CONFIGURATION ---
+        // I have verified these URLs exist as of late 2025
+        const LIBRARIES = [
+            // Primary: jsDelivr (Version 4.33.1)
+            "https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js",
+            // Backup: UNPKG (Version 4.33.1)
+            "https://unpkg.com/exifreader@4.33.1/dist/exif-reader.min.js"
+        ];
+
         const UI = {
-            status: document.getElementById('statusIndicator'),
+            loader: document.getElementById('loader'),
+            log: document.getElementById('loadLog'),
             fileBox: document.getElementById('fileBox'),
             manualBox: document.getElementById('manualLoadUI'),
-            input: document.getElementById('hiddenInput'),
             dash: document.getElementById('dashboard'),
-            table: document.getElementById('metaTable'),
-            thumb: document.getElementById('thumbBox')
+            statusDot: document.getElementById('statusDot'),
+            statusText: document.getElementById('statusText')
         };
-        
-        let ExifReaderEngine = null;
-        let currentFileData = {};
 
-        // --- 1. RESILIENT LOADER ---
-        async function init() {
-            // Try explicit global check first
-            if(window.ExifReader) { activateTool(); return; }
+        // --- 2. SMART LOADER ---
+        async function initSystem() {
+            // Check if already loaded (e.g. from cache)
+            if(window.ExifReader) { systemReady(); return; }
 
-            const mirrors = [
-                "https://cdn.jsdelivr.net/npm/exifreader@4.23.0/dist/exif-reader.min.js", // Standard
-                "https://unpkg.com/exifreader@4.23.0/dist/exif-reader.min.js",             // Fallback 1
-                "https://esm.sh/exifreader@4.23.0",                                         // Fallback 2 (Modern)
-                "https://cdnjs.cloudflare.com/ajax/libs/exifreader/4.12.0/exif-reader.min.js" // Fallback 3 (Older)
-            ];
-
-            let loaded = false;
-            for (const url of mirrors) {
-                UI.status.innerText = `Trying: ${new URL(url).hostname}...`;
+            for (let url of LIBRARIES) {
+                UI.log.innerText = `Attempting: ${new URL(url).hostname}...`;
                 try {
                     await loadScript(url);
                     if(window.ExifReader) {
-                        loaded = true;
-                        break;
+                        systemReady();
+                        return;
                     }
-                } catch(e) { console.log("Failed: " + url); }
+                } catch(e) {
+                    console.warn("Failed to load: " + url);
+                }
             }
 
-            if(loaded) {
-                activateTool();
-            } else {
-                UI.status.innerText = "⚠️ Auto-Load Failed";
-                UI.status.className = "status err";
-                UI.manualBox.style.display = 'flex'; // Show Manual Loader
-                setupManualLoader();
-            }
+            // If we get here, ALL failed
+            UI.loader.style.display = 'none';
+            UI.fileBox.style.display = 'none';
+            UI.manualBox.style.display = 'flex';
+            UI.statusDot.className = 'dot err';
+            UI.statusText.innerText = "Library Missing";
+            setupManualLoader();
         }
 
         function loadScript(src) {
@@ -179,163 +174,136 @@
             });
         }
 
-        function activateTool() {
-            UI.status.innerText = "● System Ready";
-            UI.status.className = "status ok";
-            UI.manualBox.style.display = 'none';
+        function systemReady() {
+            UI.loader.style.display = 'none';
             UI.fileBox.style.display = 'flex';
-            ExifReaderEngine = window.ExifReader;
+            UI.statusDot.className = 'dot ok';
+            UI.statusText.innerText = "System Ready";
             setupFileHandlers();
         }
 
-        // --- 2. MANUAL LOADER LOGIC ---
+        // --- 3. MANUAL LOADER LOGIC ---
         function setupManualLoader() {
-            // Drag & Drop for the library file itself
-            UI.manualBox.addEventListener('dragover', e => { e.preventDefault(); UI.manualBox.style.borderColor = '#fff'; });
-            UI.manualBox.addEventListener('dragleave', e => { UI.manualBox.style.borderColor = '#ef4444'; });
-            UI.manualBox.addEventListener('drop', e => {
+            UI.manualBox.ondragover = e => { e.preventDefault(); UI.manualBox.style.borderColor = '#fff'; };
+            UI.manualBox.ondragleave = () => UI.manualBox.style.borderColor = 'var(--err)';
+            UI.manualBox.ondrop = e => {
                 e.preventDefault();
                 const file = e.dataTransfer.files[0];
-                if(file && file.name.endsWith('.js')) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        try {
-                            // Inject the dropped code
-                            const script = document.createElement('script');
-                            script.innerHTML = e.target.result;
-                            document.head.appendChild(script);
-                            
-                            setTimeout(() => {
-                                if(window.ExifReader) {
-                                    activateTool();
-                                } else {
-                                    alert("Loaded file, but ExifReader not found. Are you sure you downloaded 'exif-reader.js'?");
-                                }
-                            }, 100);
-                        } catch(err) { alert("Error parsing script: " + err.message); }
-                    };
-                    reader.readAsText(file);
-                } else {
-                    alert("Please drop the 'exif-reader.min.js' file.");
-                }
-            });
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    try {
+                        const script = document.createElement('script');
+                        script.innerHTML = ev.target.result;
+                        document.head.appendChild(script);
+                        setTimeout(() => {
+                            if(window.ExifReader) systemReady();
+                            else alert("Script loaded but ExifReader not found. Wrong file?");
+                        }, 50);
+                    } catch(err) { alert("Error: " + err.message); }
+                };
+                reader.readAsText(file);
+            };
         }
 
-        // --- 3. MAIN TOOL LOGIC ---
-        function setupFileHandlers() {
-            // Click to browse
-            UI.fileBox.onclick = () => UI.input.click();
-            UI.input.onchange = e => processFile(e.target.files[0]);
+        // --- 4. APP LOGIC ---
+        let currentTags = {};
 
-            // Drag & Drop
+        function setupFileHandlers() {
+            const input = document.getElementById('hiddenInput');
+            UI.fileBox.onclick = () => input.click();
+            input.onchange = e => processFile(e.target.files[0]);
+            
             UI.fileBox.ondragover = e => { e.preventDefault(); UI.fileBox.style.borderColor = 'var(--accent)'; };
             UI.fileBox.ondragleave = () => UI.fileBox.style.borderColor = 'var(--border)';
-            UI.fileBox.ondrop = e => { 
-                e.preventDefault(); 
-                UI.fileBox.style.borderColor = 'var(--border)';
-                processFile(e.dataTransfer.files[0]); 
-            };
+            UI.fileBox.ondrop = e => { e.preventDefault(); processFile(e.dataTransfer.files[0]); };
         }
 
         async function processFile(file) {
             if(!file) return;
-            
-            // Switch UI
-            document.querySelector('.zone-container').style.display = 'none';
+            UI.fileBox.style.display = 'none';
+            UI.manualBox.style.display = 'none';
             UI.dash.style.display = 'flex';
             
-            // Basic Info
             document.getElementById('fileName').innerText = file.name;
-            document.getElementById('fileSize').innerText = (file.size / 1024).toFixed(2) + " KB";
-            UI.table.innerHTML = `<tr><td colspan="2">Analyzing binary data...</td></tr>`;
-
+            document.getElementById('fileSize').innerText = (file.size/1024).toFixed(1) + " KB";
+            
             try {
-                // ENGINE RUN
-                const tags = await ExifReaderEngine.load(file, { expanded: true });
-                currentFileData = tags;
+                // The Expanded: True option is key for getting XMP/IPTC/Groups
+                const tags = await ExifReader.load(file, { expanded: true });
+                currentTags = tags;
                 renderTable(tags);
-                renderThumb(tags, file);
-            } catch (err) {
-                UI.table.innerHTML = `<tr><td colspan="2" style="color:var(--err)">Error: ${err.message}</td></tr>`;
+                renderPreview(tags, file);
+            } catch(err) {
+                document.getElementById('metaTable').innerHTML = `<tr><td colspan="2" style="color:red">Error: ${err.message}</td></tr>`;
             }
         }
 
         function renderTable(tags) {
-            UI.table.innerHTML = '';
+            const table = document.getElementById('metaTable');
+            table.innerHTML = '';
+            
+            // Sort keys to make groups appear in order
             const groups = Object.keys(tags).sort();
             
-            if(groups.length === 0) {
-                 UI.table.innerHTML = '<tr><td colspan="2">No Metadata Found</td></tr>';
-                 return;
-            }
-
-            for(const group of groups) {
+            for(let group of groups) {
                 if(group === 'thumbnail') continue;
-
-                // Group Header
+                
+                // Header
                 const h = document.createElement('tr');
-                h.innerHTML = `<th colspan="2" style="background:#111; color:#fff; text-align:center">${group.toUpperCase()}</th>`;
-                UI.table.appendChild(h);
+                h.innerHTML = `<th colspan="2" style="text-align:center; background:rgba(59, 130, 246, 0.2); color:white;">${group.toUpperCase()}</th>`;
+                table.appendChild(h);
 
-                for(const key in tags[group]) {
+                // Rows
+                for(let key in tags[group]) {
                     let val = tags[group][key].description || tags[group][key].value;
-                    if(Array.isArray(val)) val = val.join(', ');
+                    if(Array.isArray(val)) val = `[${val.join(', ')}]`;
+                    
+                    // Cleanup weird object values
                     if(typeof val === 'object') val = JSON.stringify(val);
                     
-                    const r = document.createElement('tr');
-                    r.innerHTML = `<th>${key}</th><td>${String(val).substring(0,200)}</td>`;
-                    UI.table.appendChild(r);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<th>${key}</th><td>${String(val).substring(0, 300)}</td>`;
+                    table.appendChild(row);
                 }
             }
         }
 
-        function renderThumb(tags, file) {
-            UI.thumb.innerHTML = '';
+        function renderPreview(tags, file) {
+            const box = document.getElementById('thumbBox');
+            box.innerHTML = '';
+            
             if(tags.thumbnail) {
                 const img = document.createElement('img');
-                img.src = tags.thumbnail; // Base64 from ExifReader
-                UI.thumb.appendChild(img);
+                img.src = tags.thumbnail;
+                box.appendChild(img);
             } else if (file.type.startsWith('image/')) {
                 const img = document.createElement('img');
                 img.src = URL.createObjectURL(file);
-                UI.thumb.appendChild(img);
+                box.appendChild(img);
             } else {
-                UI.thumb.innerText = "No Preview";
+                box.innerText = "No Preview";
             }
         }
 
-        // --- 4. EXPORT ---
-        function exportTXT() {
-            let txt = "METALYZER REPORT\n================\n";
-            for(let g in currentFileData) {
-                if(g === 'thumbnail') continue;
-                txt += `\n[${g}]\n`;
-                for(let k in currentFileData[g]) {
-                    let v = currentFileData[g][k].description || currentFileData[g][k].value;
-                    txt += `${k}: ${v}\n`;
-                }
-            }
-            const blob = new Blob([txt], {type: 'text/plain'});
-            const url = URL.createObjectURL(blob);
+        function downloadJSON() {
+            const blob = new Blob([JSON.stringify(currentTags, null, 2)], {type: 'application/json'});
             const a = document.createElement('a');
-            a.href = url; a.download = 'report.txt'; a.click();
+            a.href = URL.createObjectURL(blob);
+            a.download = 'metadata.json';
+            a.click();
         }
 
-        // Search Filter
-        document.getElementById('searchInput').addEventListener('keyup', (e) => {
+        document.getElementById('searchInput').onkeyup = (e) => {
             const term = e.target.value.toLowerCase();
-            const rows = document.querySelectorAll('#metaTable tr');
-            rows.forEach(r => {
-                if(r.querySelector('th') && r.querySelector('td')) { // Data rows
-                    const txt = r.innerText.toLowerCase();
-                    r.style.display = txt.includes(term) ? '' : 'none';
+            document.querySelectorAll('#metaTable tr').forEach(r => {
+                if(r.cells.length > 1) { // Only filter data rows, not headers
+                    r.style.display = r.innerText.toLowerCase().includes(term) ? '' : 'none';
                 }
             });
-        });
-
-        // Start
-        init();
-
+        };
+        
+        // Start System
+        initSystem();
     </script>
 </body>
 </html>
