@@ -2,15 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MetaLyzer - Professional Forensics</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MetaLyzer - Forensics Tool</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.4/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/5.0.2/jspdf.plugin.autotable.min.js"></script>
 
     <style>
         :root {
-            --bg: #f8fafc;
+            --bg: #f1f5f9;
             --surface: #ffffff;
             --text: #0f172a;
             --muted: #64748b;
@@ -19,6 +19,7 @@
             --success: #16a34a;
             --error: #dc2626;
             --warn: #ca8a04;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
         [data-theme="dark"] {
@@ -28,86 +29,105 @@
             --muted: #94a3b8;
             --brand: #60a5fa;
             --border: #334155;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
         }
 
-        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
-        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         /* HEADER */
-        header { padding: 1rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .logo { font-size: 1.4rem; font-weight: 800; color: var(--brand); display: flex; gap: 8px; align-items: center; }
+        header { padding: 1rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .brand { font-size: 1.25rem; font-weight: 800; color: var(--brand); display: flex; align-items: center; gap: 8px; }
         .controls { display: flex; gap: 10px; align-items: center; }
-        .badge { font-size: 0.75rem; background: var(--bg); border: 1px solid var(--border); padding: 4px 10px; border-radius: 99px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #999; }
-        .dot.ok { background: var(--success); box-shadow: 0 0 5px var(--success); }
-        .dot.err { background: var(--error); }
-        .theme-btn { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+        .badge { font-size: 0.7rem; background: var(--bg); border: 1px solid var(--border); padding: 4px 8px; border-radius: 99px; display: flex; align-items: center; gap: 5px; font-weight: 600; }
+        .dot { width: 6px; height: 6px; border-radius: 50%; }
 
-        /* MAIN */
-        main { flex: 1; padding: 20px; overflow: hidden; display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 1600px; margin: 0 auto; }
+        /* MAIN LAYOUT */
+        main { flex: 1; padding: 20px; width: 100%; max-width: 1600px; margin: 0 auto; display: flex; flex-direction: column; }
 
-        /* UPLOAD */
-        #viewUpload { width: 100%; max-width: 600px; margin-top: 10vh; display: flex; flex-direction: column; gap: 20px; }
+        /* UPLOAD SCREEN */
+        #viewUpload { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 60vh; }
         .drop-box { 
             background: var(--surface); border: 2px dashed var(--border); border-radius: 16px; 
-            padding: 4rem 2rem; text-align: center; cursor: pointer; transition: 0.2s;
+            padding: 3rem 2rem; text-align: center; cursor: pointer; transition: 0.2s; width: 100%; max-width: 500px;
+            box-shadow: var(--shadow);
         }
-        .drop-box:hover { border-color: var(--brand); transform: translateY(-3px); }
-        
-        /* MANUAL LOAD */
-        #viewManual { display: none; width: 100%; max-width: 600px; margin-top: 5vh; }
-        .err-card { border: 2px dashed var(--error); background: rgba(220, 38, 38, 0.05); padding: 2rem; border-radius: 12px; text-align: center; }
-        .link { color: var(--brand); font-weight: bold; text-decoration: underline; }
+        .drop-box:active { transform: scale(0.98); }
 
-        /* DASHBOARD */
-        #viewDash { display: none; width: 100%; height: 100%; gap: 20px; }
+        /* MANUAL LOADER */
+        #viewManual { display: none; margin-top: 5vh; }
+        .err-card { border: 2px dashed var(--error); background: rgba(220, 38, 38, 0.05); padding: 2rem; border-radius: 12px; text-align: center; max-width: 500px; margin: 0 auto; }
+        .link { color: var(--brand); font-weight: bold; text-decoration: underline; word-break: break-all; }
+
+        /* DASHBOARD (SPLIT VIEW) */
+        #viewDash { display: none; gap: 20px; height: calc(100vh - 100px); }
         
-        .sidebar { width: 340px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; flex-shrink: 0; padding-bottom: 20px; }
-        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        /* SIDEBAR (Left on Desktop, Top on Mobile) */
+        .sidebar { width: 350px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; flex-shrink: 0; padding-bottom: 20px; }
+        
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 15px; box-shadow: var(--shadow); }
         
         .thumb { width: 100%; height: 200px; background: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 10px; }
         .thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
+        .info-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid var(--border); }
+        .info-row:last-child { border: none; }
+        .info-label { opacity: 0.7; font-weight: 500; }
+        .info-val { font-weight: 600; text-align: right; word-break: break-word; max-width: 60%; }
+
         /* LOCATION UI */
         .map-card { background: #ecfdf5; border: 1px solid #6ee7b7; color: #064e3b; }
         [data-theme="dark"] .map-card { background: #064e3b; border-color: #059669; color: #d1fae5; }
-        
-        .addr-row { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 4px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .addr-key { font-weight: 600; opacity: 0.8; }
-        
+
         /* BUTTONS */
-        .btn { width: 100%; padding: 10px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; margin-top: 8px; font-size: 0.9rem; }
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .btn { width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+        .btn-full { grid-column: span 2; }
         .btn-pri { background: var(--brand); color: white; }
         .btn-sec { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
         .btn-map { background: white; color: #059669; border: 1px solid #059669; margin-top: 10px; }
 
-        /* TABLE */
-        .data-area { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+        /* DATA TABLE Area */
+        .data-area { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow); }
         .search-wrap { padding: 10px; border-bottom: 1px solid var(--border); background: var(--bg); }
-        .search-inp { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+        .search-inp { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 1rem; }
         
-        .table-scroll { flex: 1; overflow-y: auto; }
+        .table-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th, td { padding: 10px 15px; text-align: left; border-bottom: 1px solid var(--border); }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border); }
         th { width: 35%; color: var(--brand); font-family: monospace; position: sticky; top: 0; background: var(--surface); z-index: 2; }
-        td { font-family: monospace; word-break: break-all; }
-        .grp-hdr { background: var(--border); color: var(--text); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding: 6px 15px; }
+        td { font-family: monospace; word-break: break-word; }
+        .grp-hdr { background: var(--border); color: var(--text); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding: 8px 15px; }
 
-        footer { margin-top: auto; padding: 15px; text-align: center; color: var(--muted); font-size: 0.8rem; background: var(--surface); border-top: 1px solid var(--border); width: 100%; }
+        footer { padding: 20px; text-align: center; color: var(--muted); font-size: 0.8rem; background: var(--surface); border-top: 1px solid var(--border); margin-top: auto; }
         
+        /* RESPONSIVE DESIGN */
+        @media (max-width: 900px) {
+            #viewDash { 
+                flex-direction: column; 
+                height: auto; /* Allow scrolling on mobile */
+            }
+            .sidebar { 
+                width: 100%; 
+                overflow: visible; 
+            }
+            .data-area { 
+                height: 500px; /* Fixed height table on mobile */
+            }
+            .drop-box { padding: 2rem 1rem; }
+        }
+
         .spinner { border: 3px solid rgba(0,0,0,0.1); border-left-color: var(--brand); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display:inline-block; vertical-align:middle; margin-right:5px;}
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        @media (max-width: 900px) { #viewDash { flex-direction: column; } .sidebar { width: 100%; } }
     </style>
 </head>
 <body>
 
     <header>
-        <div class="logo"><span>👁️</span> MetaLyzer</div>
+        <div class="brand"><span>🛡️</span> MetaLyzer</div>
         <div class="controls">
-            <div class="badge"><div id="dot" class="dot"></div> <span id="status">Init...</span></div>
-            <button id="themeToggle" class="theme-btn">🌓 Theme</button>
+            <div class="badge"><div id="dot" class="dot" style="background:#999"></div> <span id="status">Init...</span></div>
+            <button id="themeToggle" class="btn-sec" style="padding:6px 12px;">🌓</button>
         </div>
     </header>
 
@@ -116,63 +136,70 @@
             <div id="dropZone" class="drop-box">
                 <div style="font-size:3rem; opacity:0.7; margin-bottom:1rem;">📂</div>
                 <h2>Analyze File</h2>
-                <p style="color:var(--muted)">Images, Videos, PDF</p>
+                <p style="color:var(--muted)">Tap or Drag File Here</p>
                 <input type="file" id="fileInput" style="display:none">
             </div>
         </div>
 
         <div id="viewManual">
             <div class="err-card">
-                <h2 style="color:var(--error)">⚠️ Network Blocked</h2>
-                <p>Auto-loading failed. Load manually:</p>
+                <h2 style="color:var(--error)">⚠️ Offline Mode</h2>
+                <p>Auto-load blocked. Please load manually:</p>
                 <div style="background:var(--bg); padding:15px; border-radius:8px; margin:20px 0; text-align:left;">
-                    1. <a href="https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js" target="_blank" class="link">Download Library</a><br>
+                    1. <a href="https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js" target="_blank" class="link">Download Lib</a><br>
                     2. Drag it here:
                 </div>
                 <div id="manualDrop" style="border:2px dashed #777; padding:20px; border-radius:8px; cursor:pointer;">
-                    ⬇️ Drop <b>exif-reader.min.js</b>
+                    ⬇️ Drop JS Here
                 </div>
             </div>
         </div>
 
         <div id="viewDash">
             <div class="sidebar">
-                <div class="panel">
+                
+                <div class="card">
                     <div class="thumb" id="thumb"><span style="color:#666">No Preview</span></div>
-                    <div style="font-size:0.9rem; display:flex; justify-content:space-between;">
-                        <span id="fName" style="font-weight:bold">-</span>
-                        <span id="fSize" style="opacity:0.7">-</span>
+                    
+                    <div style="margin-bottom: 10px; padding-bottom:10px; border-bottom:1px solid var(--border)">
+                        <strong style="color:var(--brand)">FILE DETAILS</strong>
                     </div>
+                    
+                    <div class="info-row"><span class="info-label">Name</span> <span class="info-val" id="fName">-</span></div>
+                    <div class="info-row"><span class="info-label">Size</span> <span class="info-val" id="fSize">-</span></div>
+                    <div class="info-row"><span class="info-label">Type</span> <span class="info-val" id="fType">-</span></div>
+                    <div class="info-row"><span class="info-label">Modified</span> <span class="info-val" id="fDate">-</span></div>
                 </div>
 
-                <div class="panel map-card" id="locPanel" style="display:none;">
-                    <div style="font-weight:700; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                        <span>📍 Location Intel</span>
-                        <span style="font-size:0.7rem; opacity:0.8">GPS FOUND</span>
+                <div class="card map-card" id="locPanel" style="display:none;">
+                    <div style="font-weight:700; margin-bottom:10px; display:flex; justify-content:space-between;">
+                        <span>📍 Location Found</span>
                     </div>
                     <div id="addrData">
-                        <div style="text-align:center;"><div class="spinner"></div> Resolving Address...</div>
+                        <div style="text-align:center;"><div class="spinner"></div> Resolving...</div>
                     </div>
                     <button class="btn btn-map" onclick="openMap()">View on Google Maps</button>
                 </div>
 
-                <div class="panel" id="noGpsPanel" style="display:none; border-left:4px solid #f59e0b;">
-                    <div style="color:#f59e0b; font-weight:bold; margin-bottom:5px;">⚠️ No GPS Data</div>
-                    <div style="font-size:0.85rem;">Deep search found no coordinates.</div>
+                <div class="card" id="noGpsPanel" style="display:none; border-left:4px solid #f59e0b;">
+                    <strong style="color:#f59e0b">⚠️ No GPS Data</strong>
+                    <div style="font-size:0.85rem; margin-top:5px;">No embedded coordinates found.</div>
                 </div>
 
-                <div class="panel">
-                    <button class="btn btn-sec" onclick="exportJSON()">{} JSON</button>
-                    <button class="btn btn-sec" onclick="exportCSV()">📊 CSV</button>
-                    <button class="btn btn-sec" onclick="exportTXT()">📝 TXT</button>
-                    <button class="btn btn-pri" onclick="exportPDF()">📄 PDF Report</button>
-                    <button class="btn btn-sec" style="color:var(--error); border-color:var(--error)" onclick="location.reload()">Reset</button>
+                <div class="card">
+                    <div class="btn-grid">
+                        <button class="btn btn-sec" onclick="exportJSON()">JSON</button>
+                        <button class="btn btn-sec" onclick="exportCSV()">CSV</button>
+                        <button class="btn btn-sec" onclick="exportTXT()">TXT</button>
+                        <button class="btn btn-pri" onclick="exportPDF()">PDF</button>
+                        <button class="btn btn-sec btn-full" style="color:var(--error); border-color:var(--error)" onclick="location.reload()">Reset Tool</button>
+                    </div>
                 </div>
             </div>
 
             <div class="data-area">
                 <div class="search-wrap">
-                    <input type="text" id="search" class="search-inp" placeholder="Search tags...">
+                    <input type="text" id="search" class="search-inp" placeholder="Search metadata tags...">
                 </div>
                 <div class="table-scroll">
                     <table id="metaTable"></table>
@@ -184,7 +211,7 @@
     <footer>Made By Aryan Giri</footer>
 
     <script>
-        // --- CONFIG ---
+        // CONFIG
         const LIBS = [
             "https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js",
             "https://unpkg.com/exifreader@4.33.1/dist/exif-reader.min.js"
@@ -193,7 +220,7 @@
         let state = { tags: {}, gps: null, address: null, file: null };
         const el = (id) => document.getElementById(id);
 
-        // --- 1. RESILIENT LOADING ---
+        // 1. INIT
         async function init() {
             if(window.ExifReader) { ready(); return; }
             for(let u of LIBS) {
@@ -242,28 +269,32 @@
             };
         }
 
-        // --- 2. PROCESS FILE ---
+        // 2. PROCESS
         async function process(file) {
             if(!file) return;
             state = { tags: {}, gps: null, address: null, file: file };
 
             el('viewUpload').style.display = 'none';
             el('viewDash').style.display = 'flex';
+            
+            // Render File System Details
             el('fName').innerText = file.name;
             el('fSize').innerText = (file.size/1024).toFixed(2) + " KB";
-            el('metaTable').innerHTML = '<tr><td colspan="2">Processing...</td></tr>';
+            el('fType').innerText = file.type || "Unknown";
+            el('fDate').innerText = new Date(file.lastModified).toLocaleDateString();
+
+            el('metaTable').innerHTML = '<tr><td colspan="2">Deep Scanning...</td></tr>';
             el('locPanel').style.display = 'none';
             el('noGpsPanel').style.display = 'none';
 
             try {
-                // EXIFREADER EXPANDED MODE = "Full ExifTool" Capability
+                // ENGINE
                 const tags = await ExifReader.load(file, { expanded: true });
                 state.tags = tags;
                 
                 renderTable(tags);
                 renderThumb(tags, file);
                 
-                // DEEP GPS SCAN
                 const coords = deepGPS(tags);
                 if(coords) {
                     state.gps = coords;
@@ -278,24 +309,22 @@
             }
         }
 
-        // --- 3. DIRECTIONAL GPS LOGIC (Fixes the issue) ---
+        // 3. GPS LOGIC (Corrected Negative Calc)
         function deepGPS(tags) {
             let lat = null, lon = null;
             let latRef = null, lonRef = null;
 
-            // 1. Helper: Is this a GPS-looking key?
-            const isLat = k => k.toLowerCase().includes('latitude') && !k.toLowerCase().includes('ref');
-            const isLon = k => k.toLowerCase().includes('longitude') && !k.toLowerCase().includes('ref');
-            const isLatRef = k => k.toLowerCase().includes('latitude') && k.toLowerCase().includes('ref');
-            const isLonRef = k => k.toLowerCase().includes('longitude') && k.toLowerCase().includes('ref');
+            // Helper to clean mixed string/number values
+            const clean = (val) => {
+                if(Array.isArray(val)) return val[0]; 
+                if(typeof val === 'object' && val.description) return val.description;
+                if(typeof val === 'object' && val.value) return val.value;
+                return val;
+            };
 
-            // 2. Helper: Parse Value
             const parse = v => {
-                if(Array.isArray(v)) return parseFloat(v[0]);
-                if(typeof v === 'number') return v;
-                if(typeof v === 'string') return parseFloat(v.replace(/[^\d.-]/g, ''));
-                if(typeof v === 'object' && v.description) return parseFloat(String(v.description).replace(/[^\d.-]/g, ''));
-                return null;
+                const s = String(v).replace(/[^\d.-]/g, '');
+                return s ? parseFloat(s) : null;
             };
 
             const parseRef = v => {
@@ -303,26 +332,34 @@
                 if(Array.isArray(v)) s = v[0];
                 else if(typeof v === 'object' && v.value) s = v.value[0];
                 else s = String(v);
-                return s.toUpperCase().charAt(0); // Returns N, S, E, or W
+                return s.toUpperCase().charAt(0);
             };
 
-            // 3. Scan Everything
+            // Scan EVERY Tag
             for(const g in tags) {
                 for(const k in tags[g]) {
-                    const val = tags[g][k];
-                    if(isLat(k) && !lat) lat = parse(val);
-                    if(isLon(k) && !lon) lon = parse(val);
-                    
-                    // Look for References (N/S/E/W) to fix the negative sign issue
-                    if(isLatRef(k)) latRef = parseRef(val);
-                    if(isLonRef(k)) lonRef = parseRef(val);
+                    const keyLower = k.toLowerCase();
+                    const val = clean(tags[g][k]);
+                    if(!val) continue;
+
+                    if(keyLower.includes('latitude') && !keyLower.includes('ref')) {
+                        const n = parse(val);
+                        if(n && n !== 0 && n <= 90) lat = n;
+                    }
+                    if(keyLower.includes('longitude') && !keyLower.includes('ref')) {
+                        const n = parse(val);
+                        if(n && n !== 0 && n <= 180) lon = n;
+                    }
+                    // Capture References (N/S/E/W)
+                    if(keyLower.includes('latitude') && keyLower.includes('ref')) latRef = parseRef(val);
+                    if(keyLower.includes('longitude') && keyLower.includes('ref')) lonRef = parseRef(val);
                 }
             }
 
-            // 4. Apply Directional Logic (Crucial for UK/USA/South locations)
-            if(lat !== null && lon !== null && !isNaN(lat) && !isNaN(lon)) {
-                if(latRef === 'S') lat = Math.abs(lat) * -1;
-                if(lonRef === 'W') lon = Math.abs(lon) * -1;
+            // Apply Direction
+            if(lat !== null && lon !== null) {
+                if(latRef === 'S') lat = -Math.abs(lat);
+                if(lonRef === 'W') lon = -Math.abs(lon);
                 return { lat, lon };
             }
             return null;
@@ -331,15 +368,14 @@
         function showGPS(c) {
             el('locPanel').style.display = 'block';
             el('addrData').innerHTML = `
-                <div class="addr-row"><span>Lat:</span> <strong>${c.lat.toFixed(6)}</strong></div>
-                <div class="addr-row"><span>Lon:</span> <strong>${c.lon.toFixed(6)}</strong></div>
+                <div class="info-row"><span class="info-label">Lat</span> <span class="info-val">${c.lat.toFixed(6)}</span></div>
+                <div class="info-row"><span class="info-label">Lon</span> <span class="info-val">${c.lon.toFixed(6)}</span></div>
                 <div style="text-align:center; margin-top:5px; font-style:italic"><div class="spinner"></div> Resolving...</div>
             `;
         }
 
         async function fetchAddr(c) {
             try {
-                // Using nominatim with jsonv2 for best structure
                 const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${c.lat}&lon=${c.lon}`);
                 const d = await r.json();
                 
@@ -347,15 +383,15 @@
                     const a = d.address;
                     state.address = {
                         Country: a.country,
-                        City: a.city || a.town || a.village || a.county,
-                        Street: a.road || a.suburb || a.hamlet,
+                        City: a.city || a.town || a.village,
+                        Street: a.road || a.suburb,
                         Full: d.display_name
                     };
-
+                    
                     let h = '';
-                    if(a.country) h += `<div class="addr-row"><span class="addr-key">Country:</span> <span>${a.country}</span></div>`;
-                    if(state.address.City) h += `<div class="addr-row"><span class="addr-key">City:</span> <span>${state.address.City}</span></div>`;
-                    if(state.address.Street) h += `<div class="addr-row"><span class="addr-key">Locality:</span> <span>${state.address.Street}</span></div>`;
+                    if(a.country) h += `<div class="info-row"><span class="info-label">Country</span> <span class="info-val">${a.country}</span></div>`;
+                    if(state.address.City) h += `<div class="info-row"><span class="info-label">City</span> <span class="info-val">${state.address.City}</span></div>`;
+                    if(state.address.Street) h += `<div class="info-row"><span class="info-label">Street</span> <span class="info-val">${state.address.Street}</span></div>`;
                     
                     el('addrData').innerHTML = h;
                 } else {
@@ -370,7 +406,7 @@
             if(state.gps) window.open(`https://www.google.com/maps?q=${state.gps.lat},${state.gps.lon}`, '_blank');
         }
 
-        // --- 4. RENDER & EXPORT ---
+        // 4. RENDER
         function renderTable(tags) {
             const t = el('metaTable'); t.innerHTML = '';
             const gs = Object.keys(tags).sort();
@@ -388,7 +424,7 @@
                     if(typeof v === 'object') v = JSON.stringify(v);
                     
                     const r = document.createElement('tr');
-                    r.innerHTML = `<th>${k}</th><td>${String(v).substring(0,300)}</td>`;
+                    r.innerHTML = `<th>${k}</th><td>${String(v).substring(0,200)}</td>`;
                     t.appendChild(r);
                 }
             });
@@ -405,8 +441,13 @@
             }
         }
 
+        // 5. EXPORT
         function getFlat() {
             let r = [];
+            // Add File Sys Info
+            r.push(['FILE', 'Name', state.file.name]);
+            r.push(['FILE', 'Size', state.file.size + ' bytes']);
+            
             if(state.address && state.address.Full) r.push(['LOCATION', 'Address', state.address.Full]);
             if(state.gps) r.push(['LOCATION', 'Coords', `${state.gps.lat}, ${state.gps.lon}`]);
             
@@ -421,7 +462,7 @@
         }
 
         function exportJSON() {
-            save(JSON.stringify({ tags: state.tags, gps: state.gps, addr: state.address }, null, 2), 'meta.json', 'application/json');
+            save(JSON.stringify({ file: {name:state.file.name, size:state.file.size}, tags: state.tags, gps: state.gps, addr: state.address }, null, 2), 'meta.json', 'application/json');
         }
         function exportCSV() {
             let c = "Group,Tag,Value\n" + getFlat().map(r => `"${r[0]}","${r[1]}","${r[2].replace(/"/g,'""')}"`).join('\n');
@@ -455,8 +496,8 @@
             a.download = n; a.click();
         }
 
-        // --- 5. THEME & SEARCH ---
-        const tBtn = el('themeToggle');
+        // THEME
+        const tBtn = document.getElementById('themeToggle');
         if(localStorage.getItem('theme')==='dark') document.body.setAttribute('data-theme','dark');
         tBtn.onclick = () => {
             const d = document.body.getAttribute('data-theme') === 'dark';
@@ -464,6 +505,7 @@
             localStorage.setItem('theme', d ? 'light':'dark');
         };
 
+        // SEARCH
         el('search').onkeyup = e => {
             const v = e.target.value.toLowerCase();
             document.querySelectorAll('#metaTable tr').forEach(r => {
