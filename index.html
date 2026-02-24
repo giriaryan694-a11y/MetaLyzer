@@ -216,6 +216,9 @@
             "https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js",
             "https://unpkg.com/exifreader@4.33.1/dist/exif-reader.min.js"
         ];
+        
+        const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+        const PDFWORKER_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
         let state = { tags: {}, gps: null, address: null, file: null };
         const el = (id) => document.getElementById(id);
@@ -236,6 +239,7 @@
 
         function load(src) {
             return new Promise((res, rej) => {
+                if (document.querySelector(`script[src="${src}"]`)) return res();
                 const s = document.createElement('script'); s.src = src;
                 s.onload = res; s.onerror = rej; document.head.appendChild(s);
             });
@@ -269,7 +273,80 @@
             };
         }
 
-        // 2. PROCESS
+        // ==========================================
+        // EXTRACTION ENGINES
+        // ==========================================
+
+        async function extractPDF(file) {
+            if (!window.pdfjsLib) {
+                el('status').innerText = "Loading PDF Engine...";
+                await load(PDFJS_URL);
+                pdfjsLib.GlobalWorkerOptions.workerSrc = PDFWORKER_URL;
+                el('status').innerText = "Ready";
+            }
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+            const meta = await pdf.getMetadata();
+            
+            let tags = { "Document Info": {} };
+            
+            tags["Document Info"]["Pages"] = { description: String(pdf.numPages) };
+            if (pdf.fingerprint) tags["Document Info"]["Fingerprint"] = { description: String(pdf.fingerprint) };
+
+            if (meta.info) {
+                for (let k in meta.info) {
+                    if (meta.info[k] && typeof meta.info[k] !== 'object') {
+                        tags["Document Info"][k] = { description: String(meta.info[k]) };
+                    }
+                }
+            }
+            return tags;
+        }
+
+        async function extractTextInfo(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    const lines = text.split(/\r\n|\r|\n/).length;
+                    resolve({
+                        "File Surface Info": {
+                            "Character Count": { description: String(text.length) },
+                            "Line Count": { description: String(lines) },
+                            "Preview Snippet": { description: text.substring(0, 150).replace(/\s+/g, ' ') + "..." }
+                        }
+                    });
+                };
+                reader.onerror = () => resolve({});
+                reader.readAsText(file.slice(0, 500 * 1024)); // Read max 500KB to prevent hanging
+            });
+        }
+
+        async function extractNativeMedia(file) {
+            return new Promise((resolve) => {
+                const isVideo = file.type.startsWith('video/') || ['mp4','mov','webm'].includes(file.name.split('.').pop().toLowerCase());
+                const mediaNode = document.createElement(isVideo ? 'video' : 'audio');
+                mediaNode.preload = 'metadata';
+                
+                mediaNode.onloadedmetadata = () => {
+                    window.URL.revokeObjectURL(mediaNode.src);
+                    const info = {};
+                    if(mediaNode.duration) info["Duration"] = { description: mediaNode.duration.toFixed(2) + " seconds" };
+                    if(isVideo && mediaNode.videoWidth) {
+                        info["Resolution"] = { description: `${mediaNode.videoWidth} x ${mediaNode.videoHeight} px` };
+                    }
+                    resolve({ "Media Format Info": info });
+                };
+                
+                mediaNode.onerror = () => resolve({});
+                mediaNode.src = URL.createObjectURL(file);
+            });
+        }
+
+        // ==========================================
+        // MAIN PROCESSING LOGIC
+        // ==========================================
+
         async function process(file) {
             if(!file) return;
             state = { tags: {}, gps: null, address: null, file: file };
@@ -277,19 +354,56 @@
             el('viewUpload').style.display = 'none';
             el('viewDash').style.display = 'flex';
             
-            // Render File System Details
             el('fName').innerText = file.name;
             el('fSize').innerText = (file.size/1024).toFixed(2) + " KB";
             el('fType').innerText = file.type || "Unknown";
             el('fDate').innerText = new Date(file.lastModified).toLocaleDateString();
 
-            el('metaTable').innerHTML = '<tr><td colspan="2">Deep Scanning...</td></tr>';
+            el('metaTable').innerHTML = '<tr><td colspan="2"><div class="spinner"></div> Deep Scanning...</td></tr>';
             el('locPanel').style.display = 'none';
             el('noGpsPanel').style.display = 'none';
 
             try {
-                // ENGINE
-                const tags = await ExifReader.load(file, { expanded: true });
+                let tags = {};
+                const ext = file.name.split('.').pop().toLowerCase();
+                const isTextBased = file.type.startsWith('text/') || ['csv', 'json', 'md', 'xml', 'log'].includes(ext);
+                const isMedia = file.type.startsWith('video/') || file.type.startsWith('audio/') || ['mp4', 'mov', 'mp3', 'wav', 'webm'].includes(ext);
+
+                // 1. PDF Routing
+                if (file.type === 'application/pdf' || ext === 'pdf') {
+                    tags = await extractPDF(file);
+                } 
+                // 2. Text / CSV Routing
+                else if (isTextBased) {
+                    tags = await extractTextInfo(file);
+                }
+                // 3. Image / Media / General Routing
+                else {
+                    // ExifReader extracts atomic MP4 and Image metadata
+                    try {
+                        tags = await ExifReader.load(file, { expanded: true });
+                    } catch(err) {
+                        tags = {}; 
+                    }
+                    
+                    // Native parser pulls accurate lengths/resolutions for MP4, MP3, etc.
+                    if (isMedia) {
+                        const nativeMediaTags = await extractNativeMedia(file);
+                        if (nativeMediaTags["Media Format Info"]) {
+                            tags["Media Format Info"] = nativeMediaTags["Media Format Info"];
+                        }
+                    }
+                }
+
+                // Fallback if absolutely nothing is found
+                if(Object.keys(tags).length === 0 || (Object.keys(tags).length === 1 && tags.thumbnail)) {
+                    tags["Basic Metadata"] = {
+                        "File Extension": { description: ext.toUpperCase() },
+                        "Raw MIME Type": { description: file.type || "N/A" },
+                        "Status": { description: "Deep metadata unsupported or stripped." }
+                    };
+                }
+
                 state.tags = tags;
                 
                 renderTable(tags);
@@ -305,16 +419,19 @@
                 }
 
             } catch(e) {
-                el('metaTable').innerHTML = `<tr><td style="color:red">Error: ${e.message}</td></tr>`;
+                el('metaTable').innerHTML = `<tr><td style="color:red">Error Processing File: ${e.message}</td></tr>`;
+                el('noGpsPanel').style.display = 'block';
             }
         }
 
-        // 3. GPS LOGIC (Corrected Negative Calc)
+        // ==========================================
+        // GPS & UI RENDER LOGIC
+        // ==========================================
+
         function deepGPS(tags) {
             let lat = null, lon = null;
             let latRef = null, lonRef = null;
 
-            // Helper to clean mixed string/number values
             const clean = (val) => {
                 if(Array.isArray(val)) return val[0]; 
                 if(typeof val === 'object' && val.description) return val.description;
@@ -335,7 +452,6 @@
                 return s.toUpperCase().charAt(0);
             };
 
-            // Scan EVERY Tag
             for(const g in tags) {
                 for(const k in tags[g]) {
                     const keyLower = k.toLowerCase();
@@ -350,13 +466,11 @@
                         const n = parse(val);
                         if(n && n !== 0 && n <= 180) lon = n;
                     }
-                    // Capture References (N/S/E/W)
                     if(keyLower.includes('latitude') && keyLower.includes('ref')) latRef = parseRef(val);
                     if(keyLower.includes('longitude') && keyLower.includes('ref')) lonRef = parseRef(val);
                 }
             }
 
-            // Apply Direction
             if(lat !== null && lon !== null) {
                 if(latRef === 'S') lat = -Math.abs(lat);
                 if(lonRef === 'W') lon = -Math.abs(lon);
@@ -406,11 +520,10 @@
             if(state.gps) window.open(`https://www.google.com/maps?q=${state.gps.lat},${state.gps.lon}`, '_blank');
         }
 
-        // 4. RENDER
         function renderTable(tags) {
             const t = el('metaTable'); t.innerHTML = '';
             const gs = Object.keys(tags).sort();
-            if(!gs.length) { t.innerHTML = '<tr><td>No Tags</td></tr>'; return; }
+            if(!gs.length) { t.innerHTML = '<tr><td>No Tags Found</td></tr>'; return; }
 
             gs.forEach(g => {
                 if(g === 'thumbnail') return;
@@ -424,7 +537,7 @@
                     if(typeof v === 'object') v = JSON.stringify(v);
                     
                     const r = document.createElement('tr');
-                    r.innerHTML = `<th>${k}</th><td>${String(v).substring(0,200)}</td>`;
+                    r.innerHTML = `<th>${k}</th><td>${String(v).substring(0,250)}</td>`;
                     t.appendChild(r);
                 }
             });
@@ -432,19 +545,36 @@
 
         function renderThumb(tags, file) {
             const b = el('thumb'); b.innerHTML = '';
-            if(tags.thumbnail) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            const type = file.type;
+
+            if (tags && tags.thumbnail) {
                 const i = document.createElement('img'); i.src = tags.thumbnail; b.appendChild(i);
-            } else if(file.type.startsWith('image/')) {
+            } else if (type.startsWith('image/')) {
                 const i = document.createElement('img'); i.src = URL.createObjectURL(file); b.appendChild(i);
+            } else if (type === 'application/pdf' || ext === 'pdf') {
+                b.innerHTML = '<span style="font-size:4rem;">📄</span>';
+            } else if (type.startsWith('video/') || ['mp4', 'mov', 'webm'].includes(ext)) {
+                b.innerHTML = '<span style="font-size:4rem;">🎞️</span>';
+            } else if (type.startsWith('audio/') || ['mp3', 'wav', 'flac'].includes(ext)) {
+                b.innerHTML = '<span style="font-size:4rem;">🎵</span>';
+            } else if (type.startsWith('text/') || ['csv', 'md', 'txt'].includes(ext)) {
+                b.innerHTML = '<span style="font-size:4rem;">📝</span>';
+            } else if (['json', 'xml', 'js', 'html', 'css'].includes(ext)) {
+                b.innerHTML = '<span style="font-size:4rem;">🧑‍💻</span>';
+            } else if (['zip', 'rar', '7z', 'tar'].includes(ext)) {
+                b.innerHTML = '<span style="font-size:4rem;">🗄️</span>';
             } else {
-                b.innerHTML = '<span style="color:#777">No Preview</span>';
+                b.innerHTML = `<div style="text-align:center"><span style="font-size:3rem; color:var(--muted)">📁</span><br><span style="font-size:0.75rem; color:var(--muted)">.${ext.toUpperCase()}</span></div>`;
             }
         }
 
-        // 5. EXPORT
+        // ==========================================
+        // EXPORT LOGIC
+        // ==========================================
+
         function getFlat() {
             let r = [];
-            // Add File Sys Info
             r.push(['FILE', 'Name', state.file.name]);
             r.push(['FILE', 'Size', state.file.size + ' bytes']);
             
@@ -496,7 +626,10 @@
             a.download = n; a.click();
         }
 
-        // THEME
+        // ==========================================
+        // UI INTERACTIONS
+        // ==========================================
+
         const tBtn = document.getElementById('themeToggle');
         if(localStorage.getItem('theme')==='dark') document.body.setAttribute('data-theme','dark');
         tBtn.onclick = () => {
@@ -505,7 +638,6 @@
             localStorage.setItem('theme', d ? 'light':'dark');
         };
 
-        // SEARCH
         el('search').onkeyup = e => {
             const v = e.target.value.toLowerCase();
             document.querySelectorAll('#metaTable tr').forEach(r => {
