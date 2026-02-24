@@ -211,7 +211,7 @@
     <footer>Made By Aryan Giri</footer>
 
     <script>
-        // CONFIG
+        // CONFIG & LIBRARIES
         const LIBS = [
             "https://cdn.jsdelivr.net/npm/exifreader@4.33.1/dist/exif-reader.min.js",
             "https://unpkg.com/exifreader@4.33.1/dist/exif-reader.min.js"
@@ -219,6 +219,7 @@
         
         const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
         const PDFWORKER_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        const JSZIP_URL = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
 
         let state = { tags: {}, gps: null, address: null, file: null };
         const el = (id) => document.getElementById(id);
@@ -303,6 +304,70 @@
             return tags;
         }
 
+        async function extractOffice(file) {
+            if (!window.JSZip) {
+                el('status').innerText = "Loading Office Engine...";
+                await load(JSZIP_URL);
+                el('status').innerText = "Ready";
+            }
+
+            const tags = { "Office Metadata": {}, "Document Properties": {} };
+            try {
+                const zip = new JSZip();
+                const loadedZip = await zip.loadAsync(file);
+                const parser = new DOMParser();
+
+                const getXmlText = (doc, tagName) => {
+                    const el = doc.getElementsByTagName(tagName)[0] || doc.getElementsByTagNameNS("*", tagName.split(':')[1] || tagName)[0];
+                    return el ? el.textContent : null;
+                };
+
+                // Read core.xml for Author and Dates
+                if (loadedZip.file("docProps/core.xml")) {
+                    const coreXml = await loadedZip.file("docProps/core.xml").async("string");
+                    const coreDoc = parser.parseFromString(coreXml, "text/xml");
+                    
+                    const creator = getXmlText(coreDoc, "dc:creator");
+                    const lastModifiedBy = getXmlText(coreDoc, "cp:lastModifiedBy");
+                    const created = getXmlText(coreDoc, "dcterms:created");
+                    const modified = getXmlText(coreDoc, "dcterms:modified");
+                    const revision = getXmlText(coreDoc, "cp:revision");
+
+                    if(creator) tags["Office Metadata"]["Author"] = { description: creator };
+                    if(lastModifiedBy) tags["Office Metadata"]["Last Modified By"] = { description: lastModifiedBy };
+                    if(revision) tags["Office Metadata"]["Revision Number"] = { description: revision };
+                    if(created) tags["Office Metadata"]["Created Date"] = { description: new Date(created).toLocaleString() };
+                    if(modified) tags["Office Metadata"]["Modified Date"] = { description: new Date(modified).toLocaleString() };
+                }
+
+                // Read app.xml for Stats and Software version
+                if (loadedZip.file("docProps/app.xml")) {
+                    const appXml = await loadedZip.file("docProps/app.xml").async("string");
+                    const appDoc = parser.parseFromString(appXml, "text/xml");
+                    
+                    const app = getXmlText(appDoc, "Application");
+                    const pages = getXmlText(appDoc, "Pages");
+                    const words = getXmlText(appDoc, "Words");
+                    const totalTime = getXmlText(appDoc, "TotalTime"); // In minutes
+                    const company = getXmlText(appDoc, "Company");
+
+                    if(app) tags["Document Properties"]["Software"] = { description: app };
+                    if(company) tags["Document Properties"]["Company"] = { description: company };
+                    if(pages && pages !== "0") tags["Document Properties"]["Pages"] = { description: pages };
+                    if(words && words !== "0") tags["Document Properties"]["Word Count"] = { description: words };
+                    if(totalTime && totalTime !== "0") tags["Document Properties"]["Total Editing Time"] = { description: `${totalTime} minutes` };
+                }
+
+            } catch(e) {
+                console.warn("Office Extraction Failed", e);
+            }
+
+            if (Object.keys(tags["Office Metadata"]).length === 0) delete tags["Office Metadata"];
+            if (Object.keys(tags["Document Properties"]).length === 0) delete tags["Document Properties"];
+
+            return tags;
+        }
+
         async function extractTextInfo(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -368,25 +433,28 @@
                 const ext = file.name.split('.').pop().toLowerCase();
                 const isTextBased = file.type.startsWith('text/') || ['csv', 'json', 'md', 'xml', 'log'].includes(ext);
                 const isMedia = file.type.startsWith('video/') || file.type.startsWith('audio/') || ['mp4', 'mov', 'mp3', 'wav', 'webm'].includes(ext);
+                const isOffice = ['docx', 'xlsx', 'pptx', 'docm', 'xlsm', 'pptm'].includes(ext) || file.type.includes('officedocument');
 
                 // 1. PDF Routing
                 if (file.type === 'application/pdf' || ext === 'pdf') {
                     tags = await extractPDF(file);
                 } 
-                // 2. Text / CSV Routing
+                // 2. Microsoft Office Routing
+                else if (isOffice) {
+                    tags = await extractOffice(file);
+                }
+                // 3. Text / CSV Routing
                 else if (isTextBased) {
                     tags = await extractTextInfo(file);
                 }
-                // 3. Image / Media / General Routing
+                // 4. Image / Media / General Routing
                 else {
-                    // ExifReader extracts atomic MP4 and Image metadata
                     try {
                         tags = await ExifReader.load(file, { expanded: true });
                     } catch(err) {
                         tags = {}; 
                     }
                     
-                    // Native parser pulls accurate lengths/resolutions for MP4, MP3, etc.
                     if (isMedia) {
                         const nativeMediaTags = await extractNativeMedia(file);
                         if (nativeMediaTags["Media Format Info"]) {
@@ -395,7 +463,7 @@
                     }
                 }
 
-                // Fallback if absolutely nothing is found
+                // Fallback if nothing is found
                 if(Object.keys(tags).length === 0 || (Object.keys(tags).length === 1 && tags.thumbnail)) {
                     tags["Basic Metadata"] = {
                         "File Extension": { description: ext.toUpperCase() },
@@ -552,13 +620,19 @@
                 const i = document.createElement('img'); i.src = tags.thumbnail; b.appendChild(i);
             } else if (type.startsWith('image/')) {
                 const i = document.createElement('img'); i.src = URL.createObjectURL(file); b.appendChild(i);
+            } else if (['docx', 'doc', 'docm'].includes(ext)) {
+                b.innerHTML = '<span style="font-size:4rem; color:#2563eb">📘</span>';
+            } else if (['xlsx', 'xls', 'xlsm', 'csv'].includes(ext)) {
+                b.innerHTML = '<span style="font-size:4rem; color:#16a34a">📗</span>';
+            } else if (['pptx', 'ppt', 'pptm'].includes(ext)) {
+                b.innerHTML = '<span style="font-size:4rem; color:#dc2626">📙</span>';
             } else if (type === 'application/pdf' || ext === 'pdf') {
-                b.innerHTML = '<span style="font-size:4rem;">📄</span>';
+                b.innerHTML = '<span style="font-size:4rem; color:#ef4444">📄</span>';
             } else if (type.startsWith('video/') || ['mp4', 'mov', 'webm'].includes(ext)) {
                 b.innerHTML = '<span style="font-size:4rem;">🎞️</span>';
             } else if (type.startsWith('audio/') || ['mp3', 'wav', 'flac'].includes(ext)) {
                 b.innerHTML = '<span style="font-size:4rem;">🎵</span>';
-            } else if (type.startsWith('text/') || ['csv', 'md', 'txt'].includes(ext)) {
+            } else if (type.startsWith('text/') || ['md', 'txt'].includes(ext)) {
                 b.innerHTML = '<span style="font-size:4rem;">📝</span>';
             } else if (['json', 'xml', 'js', 'html', 'css'].includes(ext)) {
                 b.innerHTML = '<span style="font-size:4rem;">🧑‍💻</span>';
