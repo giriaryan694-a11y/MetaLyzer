@@ -99,6 +99,26 @@
         td { font-family: monospace; word-break: break-word; }
         .grp-hdr { background: var(--border); color: var(--text); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding: 8px 15px; }
 
+        /* METADATA EDIT MODE */
+        .grp-hdr-edit { background: var(--border); padding: 6px 10px; display: flex; align-items: center; gap: 8px; }
+        .grp-name-inp { flex: 1; background: transparent; border: none; border-bottom: 1px dashed var(--muted); color: var(--text); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding: 4px; font-family: inherit; }
+        .grp-name-inp:focus { outline: none; border-bottom: 1px solid var(--brand); }
+        .icon-btn { background: none; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.8rem; padding: 4px 8px; color: var(--text); flex-shrink: 0; }
+        .icon-btn:hover { border-color: var(--brand); }
+        .icon-btn.danger { color: var(--error); border-color: var(--error); }
+        .cell-inp { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px; color: var(--text); font-family: monospace; font-size: 0.85rem; }
+        .cell-inp:focus { outline: none; border-color: var(--brand); }
+        tr.edit-row td { display: flex; gap: 6px; align-items: center; }
+        tr.edit-row td .cell-inp { flex: 1; }
+        tr.edit-row th { padding: 8px 10px; }
+        tr.edit-row td { padding: 8px 10px; }
+        .add-grp-row { padding: 12px 15px; text-align: center; }
+        .edit-toolbar { display: none; gap: 8px; padding: 10px; background: var(--bg); border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+        .edit-toolbar.active { display: flex; }
+        .edit-toolbar .btn { width: auto; padding: 8px 14px; font-size: 0.8rem; }
+        .edit-note { font-size: 0.75rem; color: var(--muted); padding: 8px 15px; background: var(--bg); border-bottom: 1px solid var(--border); display: none; }
+        .edit-note.active { display: block; }
+
         footer { padding: 20px; text-align: center; color: var(--muted); font-size: 0.8rem; background: var(--surface); border-top: 1px solid var(--border); margin-top: auto; }
         
         /* RESPONSIVE DESIGN */
@@ -188,6 +208,8 @@
 
                 <div class="card">
                     <div class="btn-grid">
+                        <button class="btn btn-pri btn-full" id="editToggleBtn" onclick="toggleEditMode()">✏️ Edit Metadata</button>
+                        <button class="btn btn-sec btn-full" id="saveFileBtn" style="display:none; color:var(--success); border-color:var(--success)" onclick="exportEditedFile()">💾 Save Edited File (Write-Back)</button>
                         <button class="btn btn-sec" onclick="exportJSON()">JSON</button>
                         <button class="btn btn-sec" onclick="exportCSV()">CSV</button>
                         <button class="btn btn-sec" onclick="exportTXT()">TXT</button>
@@ -201,6 +223,12 @@
                 <div class="search-wrap">
                     <input type="text" id="search" class="search-inp" placeholder="Search metadata tags...">
                 </div>
+                <div class="edit-toolbar" id="editToolbar">
+                    <button class="btn btn-pri" onclick="addGroupPrompt()">+ Add Group</button>
+                    <button class="btn btn-pri" style="background:var(--success)" onclick="saveEditsToMemory()">✔ Save Changes</button>
+                    <button class="btn btn-sec" onclick="cancelEdit()">✖ Cancel</button>
+                </div>
+                <div class="edit-note" id="editNote"></div>
                 <div class="table-scroll">
                     <table id="metaTable"></table>
                 </div>
@@ -220,8 +248,18 @@
         const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
         const PDFWORKER_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
         const JSZIP_URL = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+        const PDFLIB_URLS = [
+            "https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js",
+            "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"
+        ];
+        const PIEXIF_URLS = [
+            "https://cdnjs.cloudflare.com/ajax/libs/piexifjs/1.0.6/piexif.js",
+            "https://unpkg.com/piexifjs@1.0.6/piexif.js"
+        ];
 
-        let state = { tags: {}, gps: null, address: null, file: null };
+        // state.editable: true if this file type supports embedded write-back editing
+        // state.editKind: 'office' | 'pdf' | 'jpeg' | null
+        let state = { tags: {}, gps: null, address: null, file: null, editMode: false, tagsBackup: null, zipRef: null, editable: false, editKind: null };
         const el = (id) => document.getElementById(id);
 
         // 1. INIT
@@ -315,6 +353,7 @@
             try {
                 const zip = new JSZip();
                 const loadedZip = await zip.loadAsync(file);
+                state.zipRef = loadedZip;
                 const parser = new DOMParser();
 
                 const getXmlText = (doc, tagName) => {
@@ -414,7 +453,8 @@
 
         async function process(file) {
             if(!file) return;
-            state = { tags: {}, gps: null, address: null, file: file };
+            state = { tags: {}, gps: null, address: null, file: file, editMode: false, tagsBackup: null, zipRef: null, editable: false, editKind: null };
+            exitEditUI();
 
             el('viewUpload').style.display = 'none';
             el('viewDash').style.display = 'flex';
@@ -463,6 +503,17 @@
                     }
                 }
 
+                // Determine if this file type supports writing metadata back into the file itself
+                if (file.type === 'application/pdf' || ext === 'pdf') {
+                    state.editable = true; state.editKind = 'pdf';
+                } else if (isOffice) {
+                    state.editable = true; state.editKind = 'office';
+                } else if (ext === 'jpg' || ext === 'jpeg' || file.type === 'image/jpeg') {
+                    state.editable = true; state.editKind = 'jpeg';
+                } else {
+                    state.editable = false; state.editKind = null;
+                }
+
                 // Fallback if nothing is found
                 if(Object.keys(tags).length === 0 || (Object.keys(tags).length === 1 && tags.thumbnail)) {
                     tags["Basic Metadata"] = {
@@ -473,6 +524,7 @@
                 }
 
                 state.tags = tags;
+                el('saveFileBtn').style.display = state.editable ? 'block' : 'none';
                 
                 renderTable(tags);
                 renderThumb(tags, file);
@@ -641,6 +693,489 @@
             } else {
                 b.innerHTML = `<div style="text-align:center"><span style="font-size:3rem; color:var(--muted)">📁</span><br><span style="font-size:0.75rem; color:var(--muted)">.${ext.toUpperCase()}</span></div>`;
             }
+        }
+
+        // ==========================================
+        // METADATA EDITING ENGINE
+        // ==========================================
+
+        let editGidCounter = 0;
+        const deepClone = (o) => JSON.parse(JSON.stringify(o));
+
+        function editNoteText() {
+            if (state.editKind === 'office') return "✏️ Editing Office document properties. Recognized fields (Author, Title, Dates, etc.) are written back into docProps/core.xml & app.xml. Any other custom fields are stored as custom document properties.";
+            if (state.editKind === 'pdf') return "✏️ Editing PDF info dictionary. Standard fields (Title, Author, Subject, Keywords, Creator, Producer, Dates) are written back into the PDF on save.";
+            if (state.editKind === 'jpeg') return "✏️ Editing JPEG EXIF data. Recognized camera/GPS tags are written back into the image. Unrecognized custom tags are preserved as JSON inside the UserComment EXIF field.";
+            return "✏️ This file type doesn't support writing metadata back into the original file. Your edits still apply to the JSON / CSV / TXT / PDF report exports.";
+        }
+
+        function toggleEditMode() {
+            if (state.editMode) return;
+            state.tagsBackup = deepClone(state.tags);
+            state.editMode = true;
+            editGidCounter = 0;
+            renderEditTable(state.tags);
+            enterEditUI();
+        }
+
+        function enterEditUI() {
+            el('editToggleBtn').style.display = 'none';
+            el('editToolbar').classList.add('active');
+            el('editNote').classList.add('active');
+            el('editNote').innerText = editNoteText();
+            el('search').closest('.search-wrap').style.display = 'none';
+        }
+
+        function exitEditUI() {
+            el('editToggleBtn').style.display = 'block';
+            el('editToolbar').classList.remove('active');
+            el('editNote').classList.remove('active');
+            const wrap = el('search') && el('search').closest('.search-wrap');
+            if (wrap) wrap.style.display = 'block';
+        }
+
+        function cancelEdit() {
+            state.tags = state.tagsBackup || state.tags;
+            state.editMode = false;
+            exitEditUI();
+            renderTable(state.tags);
+        }
+
+        function renderEditTable(tags) {
+            const t = el('metaTable'); t.innerHTML = '';
+            const gs = Object.keys(tags).filter(g => g !== 'thumbnail');
+
+            gs.forEach(g => {
+                const gid = 'g' + (editGidCounter++);
+                renderGroupHeaderRow(gid, g);
+                for (let k in tags[g]) {
+                    let v = tags[g][k].description !== undefined ? tags[g][k].description : tags[g][k].value;
+                    if (Array.isArray(v)) v = `[${v.join(', ')}]`;
+                    if (typeof v === 'object' && v !== null) v = JSON.stringify(v);
+                    renderFieldRow(gid, k, String(v === undefined ? '' : v));
+                }
+            });
+
+            if (!gs.length) {
+                const gid = 'g' + (editGidCounter++);
+                renderGroupHeaderRow(gid, 'Custom Metadata');
+                renderFieldRow(gid, '', '');
+            }
+        }
+
+        function renderGroupHeaderRow(gid, name) {
+            const h = document.createElement('tr');
+            h.className = 'edit-row';
+            h.dataset.gid = gid;
+            h.dataset.rowtype = 'header';
+            h.innerHTML = `<td colspan="2">
+                <div class="grp-hdr-edit">
+                    <input class="grp-name-inp" value="${escapeAttr(name)}">
+                    <button type="button" class="icon-btn" onclick="addFieldRow('${gid}')">+ Field</button>
+                    <button type="button" class="icon-btn danger" onclick="deleteGroup('${gid}')">🗑 Group</button>
+                </div>
+            </td>`;
+            el('metaTable').appendChild(h);
+        }
+
+        function renderFieldRow(gid, key, val) {
+            const r = document.createElement('tr');
+            r.className = 'edit-row';
+            r.dataset.gid = gid;
+            r.dataset.rowtype = 'field';
+            r.innerHTML = `<th><input class="cell-inp key-inp" placeholder="Tag name" value="${escapeAttr(key)}"></th>
+                <td><input class="cell-inp val-inp" placeholder="Value" value="${escapeAttr(val)}"><button type="button" class="icon-btn danger" onclick="this.closest('tr').remove()">🗑</button></td>`;
+            el('metaTable').appendChild(r);
+        }
+
+        function escapeAttr(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        }
+
+        function addFieldRow(gid) {
+            const rows = Array.from(document.querySelectorAll(`#metaTable tr[data-gid="${gid}"]`));
+            const last = rows[rows.length - 1];
+            const r = document.createElement('tr');
+            r.className = 'edit-row';
+            r.dataset.gid = gid;
+            r.dataset.rowtype = 'field';
+            r.innerHTML = `<th><input class="cell-inp key-inp" placeholder="Tag name" value=""></th>
+                <td><input class="cell-inp val-inp" placeholder="Value" value=""><button type="button" class="icon-btn danger" onclick="this.closest('tr').remove()">🗑</button></td>`;
+            last.after(r);
+            r.querySelector('.key-inp').focus();
+        }
+
+        function addGroupPrompt() {
+            const name = prompt("New group name:", "Custom Metadata");
+            if (name === null) return;
+            const gid = 'g' + (editGidCounter++);
+            renderGroupHeaderRow(gid, name.trim() || 'Custom Metadata');
+            renderFieldRow(gid, '', '');
+        }
+
+        function deleteGroup(gid) {
+            document.querySelectorAll(`#metaTable tr[data-gid="${gid}"]`).forEach(r => r.remove());
+        }
+
+        function saveEditsToMemory() {
+            const rows = Array.from(document.querySelectorAll('#metaTable tr[data-gid]'));
+            const gidToName = {};
+            const newTags = {};
+
+            rows.forEach(row => {
+                const gid = row.dataset.gid;
+                if (row.dataset.rowtype === 'header') {
+                    const nameInp = row.querySelector('.grp-name-inp');
+                    const name = (nameInp.value.trim()) || 'Group';
+                    gidToName[gid] = name;
+                    if (!newTags[name]) newTags[name] = {};
+                } else {
+                    const keyInp = row.querySelector('.key-inp');
+                    const valInp = row.querySelector('.val-inp');
+                    const key = keyInp.value.trim();
+                    if (!key) return;
+                    const groupName = gidToName[gid] || 'Group';
+                    if (!newTags[groupName]) newTags[groupName] = {};
+                    newTags[groupName][key] = { description: valInp.value };
+                }
+            });
+
+            // Drop any groups left empty
+            for (const g in newTags) {
+                if (Object.keys(newTags[g]).length === 0) delete newTags[g];
+            }
+
+            state.tags = newTags;
+            state.editMode = false;
+            exitEditUI();
+            renderTable(state.tags);
+            renderThumb(state.tags, state.file);
+        }
+
+        // ---- Write-back: dispatcher ----
+        async function exportEditedFile() {
+            if (!state.editable) {
+                alert("Write-back editing isn't supported for this file type. Your edits are still reflected in the JSON / CSV / TXT / PDF report exports.");
+                return;
+            }
+            if (state.editMode) {
+                alert("Please Save Changes or Cancel your current edit session first.");
+                return;
+            }
+            const btn = el('saveFileBtn');
+            const origText = btn.innerText;
+            btn.innerText = "⏳ Building...";
+            btn.disabled = true;
+            try {
+                let blob = null;
+                if (state.editKind === 'office') blob = await buildEditedOffice();
+                else if (state.editKind === 'pdf') blob = await buildEditedPDF();
+                else if (state.editKind === 'jpeg') blob = await buildEditedImage();
+
+                if (blob) {
+                    const outName = state.file.name;
+                    const dot = outName.lastIndexOf('.');
+                    const downloadName = dot > 0 ? outName.slice(0, dot) + '_edited' + outName.slice(dot) : outName + '_edited';
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = downloadName;
+                    a.click();
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Failed to write edited file: " + e.message);
+            } finally {
+                btn.innerText = origText;
+                btn.disabled = false;
+            }
+        }
+
+        // ---- Write-back: Office (docx/xlsx/pptx) ----
+        async function buildEditedOffice() {
+            if (!state.zipRef) { alert("Original file data isn't available for write-back."); return null; }
+            const zip = state.zipRef;
+            const parser = new DOMParser();
+            const serializer = new XMLSerializer();
+
+            const NS = {
+                cp: "http://schemas.openxmlformats.org/package/2006/metadata/core-properties",
+                dc: "http://purl.org/dc/elements/1.1/",
+                dcterms: "http://purl.org/dc/terms/",
+                xsi: "http://www.w3.org/2001/XMLSchema-instance",
+                app: "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"
+            };
+
+            // --- core.xml ---
+            let coreXml = zip.file("docProps/core.xml")
+                ? await zip.file("docProps/core.xml").async("string")
+                : `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="${NS.cp}" xmlns:dc="${NS.dc}" xmlns:dcterms="${NS.dcterms}" xmlns:xsi="${NS.xsi}"></cp:coreProperties>`;
+            const coreDoc = parser.parseFromString(coreXml, "text/xml");
+
+            const setNodeText = (doc, ns, prefix, local, value) => {
+                let node = doc.getElementsByTagNameNS(ns, local)[0];
+                if (!node) {
+                    node = doc.createElementNS(ns, `${prefix}:${local}`);
+                    doc.documentElement.appendChild(node);
+                }
+                node.textContent = value;
+            };
+            const setDateNode = (doc, local, value) => {
+                const d = new Date(value);
+                if (isNaN(d.getTime())) return;
+                let node = doc.getElementsByTagNameNS(NS.dcterms, local)[0];
+                if (!node) {
+                    node = doc.createElementNS(NS.dcterms, `dcterms:${local}`);
+                    doc.documentElement.appendChild(node);
+                }
+                node.setAttributeNS(NS.xsi, "xsi:type", "dcterms:W3CDTF");
+                node.textContent = d.toISOString().split('.')[0] + 'Z';
+            };
+
+            const officeGroup = state.tags["Office Metadata"] || {};
+            const coreFieldMap = [
+                ["Author", NS.dc, "dc", "creator"],
+                ["Last Modified By", NS.cp, "cp", "lastModifiedBy"],
+                ["Revision Number", NS.cp, "cp", "revision"],
+                ["Title", NS.dc, "dc", "title"],
+                ["Subject", NS.dc, "dc", "subject"],
+                ["Description", NS.dc, "dc", "description"],
+                ["Keywords", NS.cp, "cp", "keywords"],
+                ["Category", NS.cp, "cp", "category"]
+            ];
+            coreFieldMap.forEach(([label, ns, prefix, local]) => {
+                if (officeGroup[label] && officeGroup[label].description !== undefined) {
+                    setNodeText(coreDoc, ns, prefix, local, officeGroup[label].description);
+                }
+            });
+            if (officeGroup["Created Date"]) setDateNode(coreDoc, "created", officeGroup["Created Date"].description);
+            if (officeGroup["Modified Date"]) setDateNode(coreDoc, "modified", officeGroup["Modified Date"].description);
+
+            zip.file("docProps/core.xml", serializer.serializeToString(coreDoc));
+
+            // --- app.xml ---
+            let appXml = zip.file("docProps/app.xml")
+                ? await zip.file("docProps/app.xml").async("string")
+                : `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="${NS.app}"></Properties>`;
+            const appDoc = parser.parseFromString(appXml, "text/xml");
+            const setAppText = (local, value) => {
+                let node = appDoc.getElementsByTagName(local)[0];
+                if (!node) {
+                    node = appDoc.createElementNS(NS.app, local);
+                    appDoc.documentElement.appendChild(node);
+                }
+                node.textContent = value;
+            };
+            const docProps = state.tags["Document Properties"] || {};
+            if (docProps["Software"]) setAppText("Application", docProps["Software"].description);
+            if (docProps["Company"]) setAppText("Company", docProps["Company"].description);
+            zip.file("docProps/app.xml", serializer.serializeToString(appDoc));
+
+            // --- custom fields -> docProps/custom.xml ---
+            const knownLabels = new Set(["Author", "Last Modified By", "Revision Number", "Title", "Subject", "Description", "Keywords", "Category", "Created Date", "Modified Date", "Software", "Company", "Pages", "Word Count", "Total Editing Time"]);
+            const customPairs = [];
+            for (const g in state.tags) {
+                if (g === 'thumbnail') continue;
+                for (const k in state.tags[g]) {
+                    if (g === "Office Metadata" || g === "Document Properties") {
+                        if (!knownLabels.has(k)) customPairs.push([k, state.tags[g][k].description]);
+                    } else {
+                        customPairs.push([k, state.tags[g][k].description]);
+                    }
+                }
+            }
+            if (customPairs.length) {
+                await writeCustomProps(zip, customPairs, parser, serializer);
+            }
+
+            return await zip.generateAsync({ type: "blob" });
+        }
+
+        async function writeCustomProps(zip, pairs, parser, serializer) {
+            const CUSTOM_NS = "http://schemas.openxmlformats.org/officeDocument/2006/custom-properties";
+            const VT_NS = "http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes";
+            let xml = zip.file("docProps/custom.xml")
+                ? await zip.file("docProps/custom.xml").async("string")
+                : `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="${CUSTOM_NS}" xmlns:vt="${VT_NS}"></Properties>`;
+            const doc = parser.parseFromString(xml, "text/xml");
+
+            let maxPid = 1;
+            Array.from(doc.getElementsByTagName("property")).forEach(p => {
+                const pid = parseInt(p.getAttribute("pid") || "1", 10);
+                if (pid > maxPid) maxPid = pid;
+            });
+
+            pairs.forEach(([name, value]) => {
+                Array.from(doc.getElementsByTagName("property")).forEach(p => {
+                    if (p.getAttribute("name") === name) doc.documentElement.removeChild(p);
+                });
+                maxPid++;
+                const prop = doc.createElementNS(CUSTOM_NS, "property");
+                prop.setAttribute("fmtid", "{D5CDD505-2E9C-101B-9397-08002B2CF9AE}");
+                prop.setAttribute("pid", String(maxPid));
+                prop.setAttribute("name", name);
+                const lpwstr = doc.createElementNS(VT_NS, "vt:lpwstr");
+                lpwstr.textContent = value === undefined ? "" : String(value);
+                prop.appendChild(lpwstr);
+                doc.documentElement.appendChild(prop);
+            });
+
+            zip.file("docProps/custom.xml", serializer.serializeToString(doc));
+            await ensureCustomPropsRegistered(zip, parser, serializer);
+        }
+
+        async function ensureCustomPropsRegistered(zip, parser, serializer) {
+            if (zip.file("[Content_Types].xml")) {
+                let ctXml = await zip.file("[Content_Types].xml").async("string");
+                if (!ctXml.includes("docProps/custom.xml")) {
+                    const ctDoc = parser.parseFromString(ctXml, "text/xml");
+                    const CT_NS = "http://schemas.openxmlformats.org/package/2006/content-types";
+                    const override = ctDoc.createElementNS(CT_NS, "Override");
+                    override.setAttribute("PartName", "/docProps/custom.xml");
+                    override.setAttribute("ContentType", "application/vnd.openxmlformats-officedocument.custom-properties+xml");
+                    ctDoc.documentElement.appendChild(override);
+                    zip.file("[Content_Types].xml", serializer.serializeToString(ctDoc));
+                }
+            }
+            if (zip.file("_rels/.rels")) {
+                let relsXml = await zip.file("_rels/.rels").async("string");
+                if (!relsXml.includes("docProps/custom.xml")) {
+                    const relsDoc = parser.parseFromString(relsXml, "text/xml");
+                    const REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships";
+                    let maxId = 0;
+                    Array.from(relsDoc.getElementsByTagName("Relationship")).forEach(r => {
+                        const m = (r.getAttribute("Id") || "").match(/\d+/);
+                        if (m) maxId = Math.max(maxId, parseInt(m[0], 10));
+                    });
+                    const rel = relsDoc.createElementNS(REL_NS, "Relationship");
+                    rel.setAttribute("Id", "rId" + (maxId + 1));
+                    rel.setAttribute("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties");
+                    rel.setAttribute("Target", "docProps/custom.xml");
+                    relsDoc.documentElement.appendChild(rel);
+                    zip.file("_rels/.rels", serializer.serializeToString(relsDoc));
+                }
+            }
+        }
+
+        // ---- Write-back: PDF ----
+        async function buildEditedPDF() {
+            if (!window.PDFLib) {
+                el('status').innerText = "Loading PDF Write Engine...";
+                for (const u of PDFLIB_URLS) { try { await load(u); if (window.PDFLib) break; } catch (e) {} }
+                el('status').innerText = "Ready";
+            }
+            if (!window.PDFLib) { alert("Could not load the PDF write engine (check network access)."); return null; }
+
+            const bytes = await state.file.arrayBuffer();
+            const pdfDoc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true, updateMetadata: false });
+            const info = state.tags["Document Info"] || {};
+            const setIf = (label, fn) => { if (info[label] && info[label].description) fn(String(info[label].description)); };
+
+            setIf("Title", v => pdfDoc.setTitle(v));
+            setIf("Author", v => pdfDoc.setAuthor(v));
+            setIf("Subject", v => pdfDoc.setSubject(v));
+            setIf("Keywords", v => pdfDoc.setKeywords(v.split(',').map(s => s.trim()).filter(Boolean)));
+            setIf("Creator", v => pdfDoc.setCreator(v));
+            setIf("Producer", v => pdfDoc.setProducer(v));
+
+            if (info["CreationDate"] && info["CreationDate"].description) {
+                const d = new Date(info["CreationDate"].description);
+                if (!isNaN(d.getTime())) pdfDoc.setCreationDate(d);
+            }
+            if (info["ModDate"] && info["ModDate"].description) {
+                const d = new Date(info["ModDate"].description);
+                if (!isNaN(d.getTime())) pdfDoc.setModificationDate(d);
+            }
+
+            const outBytes = await pdfDoc.save();
+            return new Blob([outBytes], { type: "application/pdf" });
+        }
+
+        // ---- Write-back: JPEG EXIF ----
+        function fileToDataURL(file) {
+            return new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onload = () => res(r.result);
+                r.onerror = rej;
+                r.readAsDataURL(file);
+            });
+        }
+        function dataURLtoBlob(dataUrl) {
+            const [head, b64] = dataUrl.split(',');
+            const mime = head.match(/:(.*?);/)[1];
+            const bin = atob(b64);
+            const arr = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+            return new Blob([arr], { type: mime });
+        }
+
+        async function buildEditedImage() {
+            if (!window.piexif) {
+                el('status').innerText = "Loading EXIF Write Engine...";
+                for (const u of PIEXIF_URLS) { try { await load(u); if (window.piexif) break; } catch (e) {} }
+                el('status').innerText = "Ready";
+            }
+            if (!window.piexif) { alert("Could not load the EXIF write engine (check network access)."); return null; }
+
+            const dataUrl = await fileToDataURL(state.file);
+            let exifObj;
+            try { exifObj = piexif.load(dataUrl); }
+            catch (e) { exifObj = { "0th": {}, "Exif": {}, "GPS": {}, "1st": {} }; }
+            exifObj["0th"] = exifObj["0th"] || {};
+            exifObj["Exif"] = exifObj["Exif"] || {};
+            exifObj["GPS"] = exifObj["GPS"] || {};
+            delete exifObj["thumbnail"];
+
+            const TAGMAP_0TH = {
+                "Make": piexif.ImageIFD.Make, "Model": piexif.ImageIFD.Model,
+                "Software": piexif.ImageIFD.Software, "Artist": piexif.ImageIFD.Artist,
+                "Copyright": piexif.ImageIFD.Copyright, "DateTime": piexif.ImageIFD.DateTime,
+                "Orientation": piexif.ImageIFD.Orientation, "ImageDescription": piexif.ImageIFD.ImageDescription
+            };
+            const TAGMAP_EXIF = {
+                "DateTimeOriginal": piexif.ExifIFD.DateTimeOriginal, "DateTimeDigitized": piexif.ExifIFD.DateTimeDigitized,
+                "LensModel": piexif.ExifIFD.LensModel, "ExposureTime": piexif.ExifIFD.ExposureTime,
+                "FNumber": piexif.ExifIFD.FNumber, "ISOSpeedRatings": piexif.ExifIFD.ISOSpeedRatings,
+                "FocalLength": piexif.ExifIFD.FocalLength
+            };
+
+            const allEntries = [];
+            for (const g in state.tags) {
+                if (g === 'thumbnail') continue;
+                for (const k in state.tags[g]) allEntries.push([k, state.tags[g][k].description]);
+            }
+
+            const unmapped = [];
+            allEntries.forEach(([k, v]) => {
+                if (v === undefined || v === null) return;
+                if (TAGMAP_0TH[k] !== undefined) exifObj["0th"][TAGMAP_0TH[k]] = String(v);
+                else if (TAGMAP_EXIF[k] !== undefined) exifObj["Exif"][TAGMAP_EXIF[k]] = String(v);
+                else unmapped.push([k, v]);
+            });
+
+            const coords = deepGPS(state.tags);
+            if (coords) {
+                const toDMS = (deg) => {
+                    const abs = Math.abs(deg);
+                    const d = Math.floor(abs);
+                    const mFull = (abs - d) * 60;
+                    const m = Math.floor(mFull);
+                    const s = Math.round((mFull - m) * 60 * 100);
+                    return [[d, 1], [m, 1], [s, 100]];
+                };
+                exifObj["GPS"][piexif.GPSIFD.GPSLatitudeRef] = coords.lat >= 0 ? "N" : "S";
+                exifObj["GPS"][piexif.GPSIFD.GPSLatitude] = toDMS(coords.lat);
+                exifObj["GPS"][piexif.GPSIFD.GPSLongitudeRef] = coords.lon >= 0 ? "E" : "W";
+                exifObj["GPS"][piexif.GPSIFD.GPSLongitude] = toDMS(coords.lon);
+            }
+
+            if (unmapped.length) {
+                const payload = JSON.stringify(Object.fromEntries(unmapped));
+                exifObj["Exif"][piexif.ExifIFD.UserComment] = "ASCII\0\0\0" + payload.substring(0, 1900);
+            }
+
+            const exifBytes = piexif.dump(exifObj);
+            const newDataUrl = piexif.insert(exifBytes, dataUrl);
+            return dataURLtoBlob(newDataUrl);
         }
 
         // ==========================================
