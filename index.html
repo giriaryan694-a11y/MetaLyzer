@@ -1125,17 +1125,50 @@
             exifObj["GPS"] = exifObj["GPS"] || {};
             delete exifObj["thumbnail"];
 
-            const TAGMAP_0TH = {
-                "Make": piexif.ImageIFD.Make, "Model": piexif.ImageIFD.Model,
-                "Software": piexif.ImageIFD.Software, "Artist": piexif.ImageIFD.Artist,
-                "Copyright": piexif.ImageIFD.Copyright, "DateTime": piexif.ImageIFD.DateTime,
-                "Orientation": piexif.ImageIFD.Orientation, "ImageDescription": piexif.ImageIFD.ImageDescription
+            // Each EXIF tag has a required data type (ascii string, short int, or
+            // rational [num, denom]) - piexif throws a 'pack' error if the wrong
+            // JS type is handed to it, so every tag here declares its type.
+            const TAG_DEFS_0TH = {
+                "Make": { tag: piexif.ImageIFD.Make, type: 'ascii' },
+                "Model": { tag: piexif.ImageIFD.Model, type: 'ascii' },
+                "Software": { tag: piexif.ImageIFD.Software, type: 'ascii' },
+                "Artist": { tag: piexif.ImageIFD.Artist, type: 'ascii' },
+                "Copyright": { tag: piexif.ImageIFD.Copyright, type: 'ascii' },
+                "DateTime": { tag: piexif.ImageIFD.DateTime, type: 'ascii' },
+                "Orientation": { tag: piexif.ImageIFD.Orientation, type: 'short' },
+                "ImageDescription": { tag: piexif.ImageIFD.ImageDescription, type: 'ascii' }
             };
-            const TAGMAP_EXIF = {
-                "DateTimeOriginal": piexif.ExifIFD.DateTimeOriginal, "DateTimeDigitized": piexif.ExifIFD.DateTimeDigitized,
-                "LensModel": piexif.ExifIFD.LensModel, "ExposureTime": piexif.ExifIFD.ExposureTime,
-                "FNumber": piexif.ExifIFD.FNumber, "ISOSpeedRatings": piexif.ExifIFD.ISOSpeedRatings,
-                "FocalLength": piexif.ExifIFD.FocalLength
+            const TAG_DEFS_EXIF = {
+                "DateTimeOriginal": { tag: piexif.ExifIFD.DateTimeOriginal, type: 'ascii' },
+                "DateTimeDigitized": { tag: piexif.ExifIFD.DateTimeDigitized, type: 'ascii' },
+                "LensModel": { tag: piexif.ExifIFD.LensModel, type: 'ascii' },
+                "ExposureTime": { tag: piexif.ExifIFD.ExposureTime, type: 'rational' },
+                "FNumber": { tag: piexif.ExifIFD.FNumber, type: 'rational' },
+                "ISOSpeedRatings": { tag: piexif.ExifIFD.ISOSpeedRatings, type: 'short' },
+                "FocalLength": { tag: piexif.ExifIFD.FocalLength, type: 'rational' }
+            };
+
+            const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+            const toRational = (raw) => {
+                const s = String(raw).trim();
+                const frac = s.match(/^(-?\d+)\s*\/\s*(\d+)$/);
+                if (frac) return [parseInt(frac[1], 10), parseInt(frac[2], 10)];
+                const num = parseFloat(s.replace(/[^0-9.\-]/g, ''));
+                if (isNaN(num)) return null;
+                const denom = 1000;
+                let n = Math.round(num * denom);
+                let d = denom;
+                const g = gcd(Math.abs(n), d) || 1;
+                return [n / g, d / g];
+            };
+            const convertByType = (type, raw) => {
+                if (type === 'ascii') return String(raw);
+                if (type === 'short') {
+                    const n = parseInt(String(raw).replace(/[^0-9-]/g, ''), 10);
+                    return isNaN(n) ? null : n;
+                }
+                if (type === 'rational') return toRational(raw);
+                return String(raw);
             };
 
             const allEntries = [];
@@ -1147,9 +1180,17 @@
             const unmapped = [];
             allEntries.forEach(([k, v]) => {
                 if (v === undefined || v === null) return;
-                if (TAGMAP_0TH[k] !== undefined) exifObj["0th"][TAGMAP_0TH[k]] = String(v);
-                else if (TAGMAP_EXIF[k] !== undefined) exifObj["Exif"][TAGMAP_EXIF[k]] = String(v);
-                else unmapped.push([k, v]);
+                const def0 = TAG_DEFS_0TH[k];
+                const defE = TAG_DEFS_EXIF[k];
+                if (def0) {
+                    const conv = convertByType(def0.type, v);
+                    if (conv !== null) exifObj["0th"][def0.tag] = conv; else unmapped.push([k, v]);
+                } else if (defE) {
+                    const conv = convertByType(defE.type, v);
+                    if (conv !== null) exifObj["Exif"][defE.tag] = conv; else unmapped.push([k, v]);
+                } else {
+                    unmapped.push([k, v]);
+                }
             });
 
             const coords = deepGPS(state.tags);
