@@ -4,7 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MetaLyzer - Forensics Tool</title>
-    
+
+    <!-- PWA: manifest -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#2563eb" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+    <meta name="description" content="Client-side file metadata forensics tool: EXIF, GPS, Office, PDF & media metadata inspector and editor.">
+
+    <!-- PWA: icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32x32.png">
+    <link rel="icon" type="image/x-icon" href="./icons/favicon.ico">
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+
+    <!-- PWA: iOS standalone support (no native manifest support on iOS Safari) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MetaLyzer">
+
+    <!-- PWA: Windows tile -->
+    <meta name="msapplication-TileColor" content="#2563eb">
+    <meta name="msapplication-TileImage" content="./icons/icon-144x144.png">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.4/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/5.0.2/jspdf.plugin.autotable.min.js"></script>
 
@@ -139,6 +159,11 @@
 
         .spinner { border: 3px solid rgba(0,0,0,0.1); border-left-color: var(--brand); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display:inline-block; vertical-align:middle; margin-right:5px;}
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* PWA INSTALL BUTTON */
+        #installBtn { display: none; padding: 6px 12px; font-size: 0.8rem; }
+        #iosInstallHint { display: none; position: fixed; left: 12px; right: 12px; bottom: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); font-size: 0.8rem; z-index: 200; }
+        #iosInstallHint .close { float: right; background: none; border: none; color: var(--muted); font-size: 1rem; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -147,6 +172,7 @@
         <div class="brand"><span>🛡️</span> MetaLyzer</div>
         <div class="controls">
             <div class="badge"><div id="dot" class="dot" style="background:#999"></div> <span id="status">Init...</span></div>
+            <button id="installBtn" class="btn-sec">⬇️ Install App</button>
             <button id="themeToggle" class="btn-sec" style="padding:6px 12px;">🌓</button>
         </div>
     </header>
@@ -235,6 +261,12 @@
             </div>
         </div>
     </main>
+
+    <div id="iosInstallHint">
+        <button class="close" onclick="document.getElementById('iosInstallHint').style.display='none'">✕</button>
+        <strong>Install MetaLyzer</strong><br>
+        Tap the Share icon <span style="font-weight:700">⬆️</span> in Safari, then choose <strong>"Add to Home Screen"</strong>.
+    </div>
 
     <footer>Made By Aryan Giri</footer>
 
@@ -1296,6 +1328,66 @@
         };
 
         init();
+
+        // ==========================================
+        // PWA: install prompt (desktop + Android) + service worker + iOS hint
+        // ==========================================
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js').catch(err => {
+                    console.warn('Service worker registration failed:', err);
+                });
+            });
+        }
+
+        let deferredInstallPrompt = null;
+        const installBtn = el('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            installBtn.style.display = 'inline-block';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (!deferredInstallPrompt) return;
+            installBtn.disabled = true;
+            deferredInstallPrompt.prompt();
+            await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            installBtn.style.display = 'none';
+            installBtn.disabled = false;
+        });
+
+        window.addEventListener('appinstalled', () => {
+            installBtn.style.display = 'none';
+            deferredInstallPrompt = null;
+        });
+
+        // Already running as an installed app? Don't show install UI at all.
+        function isStandalone() {
+            return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        }
+
+        // iOS Safari has no beforeinstallprompt event, so show a one-time manual hint instead.
+        function isIOS() {
+            return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        }
+
+        if (!isStandalone()) {
+            if (isIOS() && !localStorage.getItem('iosInstallHintDismissed')) {
+                setTimeout(() => { el('iosInstallHint').style.display = 'block'; }, 1500);
+            }
+        }
+
+        const iosHintCloseObserver = document.getElementById('iosInstallHint');
+        if (iosHintCloseObserver) {
+            iosHintCloseObserver.querySelector('.close').addEventListener('click', () => {
+                localStorage.setItem('iosInstallHintDismissed', '1');
+            });
+        }
     </script>
 </body>
 </html>
